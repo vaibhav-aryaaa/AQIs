@@ -208,7 +208,27 @@ def trigger_grap_ticket(db: Session, node_id: int, forecasted_aqi: float):
 
 def dispatch_telegram_alert(message: str):
     """
-    Stub for Telegram alerting gateway. Implemented in Phase 4.
+    Sends an automated notification to a Telegram channel/group using the Bot API.
+    Loads credentials from env variables. Logs to console if variables are not configured.
     """
-    # For now, print to console as fallback log
-    print(f"📢 [Telegram Alert Route] -> {message}")
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    
+    if bot_token and chat_id:
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        payload = {
+            "chat_id": chat_id,
+            "text": f"🚨 *SmartAQI Preemptive Alert* 🚨\n\n{message}",
+            "parse_mode": "Markdown"
+        }
+        try:
+            response = requests.post(url, json=payload, timeout=5)
+            if response.status_code == 200:
+                print("📢 Telegram alert successfully dispatched.")
+            else:
+                print(f"⚠️ Telegram Bot API returned status code {response.status_code}: {response.text}")
+        except Exception as e:
+            print(f"❌ Failed to dispatch Telegram alert: {e}")
+    else:
+        print("ℹ️ Telegram credentials not configured. Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID to enable live alerts.")
+        print(f"📢 [Logged Alert] -> {message}")

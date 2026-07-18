@@ -9,8 +9,11 @@ export default function App() {
   const [selectedNodeId, setSelectedNodeId] = useState(1); // Default to first node
   const [forecastValue, setForecastValue] = useState(null);
   const [loadingForecast, setLoadingForecast] = useState(false);
+  
+  // State to hold the active quarantined anomaly alert banner data
+  const [anomalyAlert, setAnomalyAlert] = useState(null);
 
-  // 1. Fetch current node data and tickets
+  // 1. Initial Load of current telemetry and tickets (fallback polling just in case)
   const fetchData = async () => {
     try {
       const telemetryRes = await fetch('/api/telemetry/current');
@@ -25,7 +28,7 @@ export default function App() {
     }
   };
 
-  // 2. Fetch forecast when selected node changes
+  // 2. Load forecast on selected node change
   const fetchForecast = async (nodeId) => {
     if (!nodeId) return;
     setLoadingForecast(true);
@@ -40,17 +43,77 @@ export default function App() {
     }
   };
 
-  // Initial load and periodic polling (every 5 seconds)
+  // Setup WebSocket connection and handle real-time broadcasts
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
+    fetchData(); // Run initial fetch
+
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsHost = window.location.host;
+    const wsUrl = `${wsProtocol}//${wsHost}/api/ws`;
+    
+    console.log('Connecting to WebSocket server:', wsUrl);
+    const socket = new WebSocket(wsUrl);
+
+    socket.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        console.log('Received WebSocket broadcast:', msg);
+        
+        if (msg.type === 'telemetry') {
+          // Instantly update the node's readings on map & inspector
+          setNodes((prevNodes) => 
+            prevNodes.map((n) => n.node_id === msg.data.node_id ? { ...n, ...msg.data } : n)
+          );
+        } else if (msg.type === 'anomaly') {
+          // Display the quarantined anomaly alert banner
+          setAnomalyAlert(msg.data);
+          // Hide banner after 8 seconds
+          setTimeout(() => setAnomalyAlert(null), 8000);
+        } else if (msg.type === 'ticket') {
+          // Add new GRAP ticket to the top of the action sidebar
+          setTickets((prevTickets) => [msg.data, ...prevTickets]);
+        }
+      } catch (err) {
+        console.error('Error parsing WebSocket json:', err);
+      }
+    };
+
+    socket.onclose = () => {
+      console.log('WebSocket connection closed. Falling back to HTTP refresh mode.');
+    };
+
+    return () => {
+      socket.close();
+    };
   }, []);
 
   // Sync forecast fetch on selected node change
   useEffect(() => {
     fetchForecast(selectedNodeId);
   }, [selectedNodeId]);
+
+  // Handler to post a mock spatial anomaly payload to backend
+  const simulateAnomaly = async () => {
+    const activeNode = nodes.find(n => n.node_id === selectedNodeId);
+    if (!activeNode) return;
+
+    console.log(`Triggering anomaly simulation for Node ${selectedNodeId}...`);
+    try {
+      await fetch('/api/telemetry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          node_id: selectedNodeId,
+          pm25: 650.0,
+          pm10: 1200.0,
+          co: 95.0, // Exceeds absolute physical limit (50)
+          aqi: 750.0 // Exceeds normal limits
+        })
+      });
+    } catch (err) {
+      console.error('Failed to post simulated anomaly:', err);
+    }
+  };
 
   const selectedNode = nodes.find(n => n.node_id === selectedNodeId);
 
@@ -71,6 +134,36 @@ export default function App() {
 
   return (
     <div className="app-container">
+      {/* Real-time Anomaly Quarantine Alert Banner */}
+      {anomalyAlert && (
+        <div style={{
+          position: 'absolute',
+          top: '85px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(127, 29, 29, 0.95)',
+          border: '2px solid #ef4444',
+          boxShadow: '0 0 25px rgba(239, 68, 68, 0.5)',
+          color: '#ffffff',
+          padding: '14px 28px',
+          borderRadius: '12px',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
+          minWidth: '380px',
+          fontFamily: 'Inter, sans-serif'
+        }}>
+          <strong style={{ fontSize: '0.95rem', letterSpacing: '0.05em' }}>🚨 TELEMETRY QUARANTINED</strong>
+          <span style={{ fontSize: '0.85rem' }}>
+            Node {anomalyAlert.node_id} ({anomalyAlert.area_name}) reported a spatial outlier!
+          </span>
+          <span style={{ fontSize: '0.75rem', color: '#fca5a5', fontStyle: 'italic' }}>
+            Reason: {anomalyAlert.reason}
+          </span>
+        </div>
+      )}
+
       {/* Header Bar */}
       <header className="app-header">
         <div className="logo-container">
@@ -82,7 +175,7 @@ export default function App() {
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
           <div className="status-badge">
             <span className="status-dot"></span>
-            Telemetry Grid Active
+            Real-Time Stream Active
           </div>
         </div>
       </header>
@@ -110,9 +203,30 @@ export default function App() {
             <h3 className="card-title">
               <span>Node Inspector</span>
               {selectedNode && (
-                <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                  ID: {selectedNode.node_id}
-                </span>
+                <button 
+                  onClick={simulateAnomaly}
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.15)',
+                    color: '#f87171',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    borderRadius: '8px',
+                    padding: '4px 10px',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.style.background = 'rgba(239, 68, 68, 0.3)';
+                    e.target.style.borderColor = '#ef4444';
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.background = 'rgba(239, 68, 68, 0.15)';
+                    e.target.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+                  }}
+                >
+                  ⚠️ Simulate Anomaly
+                </button>
               )}
             </h3>
             {selectedNode ? (

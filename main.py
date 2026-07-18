@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timedelta
 from db import SessionLocal, init_db, SensorNode, SensorTelemetry, TelemetryAnomaly, AlertTicket
 from validator import TelemetrySchema, validate_spatial_consistency
+from predictor import run_aqi_forecast
 
 app = FastAPI(title="SmartAQI Backend Application", version="1.0.0")
 
@@ -116,3 +117,19 @@ def get_current_telemetry(db: Session = Depends(get_db)):
 @app.get("/api/tickets")
 def get_tickets(db: Session = Depends(get_db)):
     return db.query(AlertTicket).order_by(AlertTicket.timestamp.desc()).all()
+
+@app.get("/api/forecast/{node_id}")
+def get_node_forecast(node_id: int, db: Session = Depends(get_db)):
+    node = db.query(SensorNode).filter(SensorNode.id == node_id).first()
+    if not node:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Sensor node with ID {node_id} does not exist"
+        )
+    forecasted_aqi = run_aqi_forecast(db, node_id)
+    return {
+        "node_id": node_id,
+        "area_name": node.area_name,
+        "forecasted_aqi": forecasted_aqi,
+        "forecast_timestamp": datetime.utcnow() + timedelta(hours=24)
+    }

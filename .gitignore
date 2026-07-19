@@ -1,0 +1,45 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Databases
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Datasets (Excel & CSV)
+*.xlsx
+*.csv
+!city_day.csv  # Keep tracker of the raw dataset if required, or comment out to ignore all
+
+# Application Logs
+*.log
+app.log
+
+# Serialization & Compiled ML Models
+*.pkl
+*.pickle
+
+# Node.js (React Frontend)
+node_modules/
+dist/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Python Environments
+.venv/
+venv/
+ENV/
+env/
+
+# OS Metadata
+.DS_Store
+Thumbs.db

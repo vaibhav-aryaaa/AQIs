@@ -7,15 +7,15 @@ An enterprise-grade, preemptive air quality monitoring and automated decision su
 ## 🚀 Key Features & Production Upgrades
 
 ### 1. Production DevOps & Containerization
-* **Multi-Service Docker Grid:** Orchestrated via `docker-compose.yml` to spin up a FastAPI backend (running on Uvicorn) and a modular React frontend (compiled via Vite and served via an Nginx reverse-proxy on port `3000`).
+* **Multi-Service Docker Grid:** Orchestrated via `docker-compose.yml` to spin up a FastAPI backend (running on Uvicorn inside `./backend`) and a modular React frontend (compiled via Vite and served via Nginx inside `./frontend`).
 * **Clean Network Routing:** Frontend assets and backend API endpoints communicate securely over a private Docker bridged network, handling reverse proxies for REST `/api` routes and WebSocket `/api/ws` connections.
 
 ### 2. Real-Time WebSockets Synchronization
-* **Instant Event Streaming:** Replaced periodic HTTP poll loops with a native asynchronous WebSocket broker. Telemetry updates, quarantined outliers, and newly opened GRAP mitigation tickets are pushed to client UIs instantly.
-* **Interactive Anomaly Simulator:** Includes a built-in button on the dashboard UI to send simulated sensor anomalies (e.g. $AQI = 750, CO = 95\ mg/m^3$) to test and display the real-time server quarantine and alerting workflow.
+* **Instant Event Streaming:** Pushes telemetry updates, quarantined outliers, and newly opened GRAP mitigation tickets to client UIs instantly using a native asynchronous WebSocket broker.
+* **Interactive Anomaly Simulator:** Includes a built-in button on the dashboard UI to send simulated sensor anomalies (e.g., $AQI = 750, CO = 95\ mg/m^3$) to test and display the real-time server quarantine and alerting workflow.
 
 ### 3. Spatial Anomaly Consistency Checking
-* **Quarantine Pipeline:** Incoming sensor telemetry is verified in real-time. Pydantic models enforce physical boundaries, while a **Haversine Distance Filter** queries active neighboring nodes within a 2 km radius. 
+* **Quarantine Pipeline:** Ingested sensor telemetry is validated in real-time. Pydantic models enforce physical boundaries, while a **Haversine Distance Filter** queries active neighboring nodes within a 2 km radius. 
 * **Outlier Isolation:** If a node's reading deviates from its neighbors by $> 3\sigma$ (standard deviations), the pipeline quarantines the log in a `TelemetryAnomaly` database table and alerts administrators rather than publishing raw unverified logs.
 
 ### 4. 24-Hour AI Forecasting Engine
@@ -31,32 +31,41 @@ An enterprise-grade, preemptive air quality monitoring and automated decision su
 
 ## 📁 Repository Structure
 
-* `Dockerfile` - Backend FastAPI container configuration.
-* `docker-compose.yml` - Multi-service local orchestrator.
-* `requirements.txt` - Python backend package specifications.
-* `db.py` - Database models and Delhi-NCR node seeding.
-* `main.py` - Web server, WebSocket connections, and endpoints.
-* `validator.py` - Pydantic schema validation and Haversine spatial check.
-* `predictor.py` - Open-Meteo forecasts, feature engineering, and model inference.
-* `train_model.py` - Fits the XGBoost Regressor on dataset and exports the model pickle.
-* `simulator.py` - Script generating diurnal telemetry logs and random outliers.
-* `test_main.py` - Pytest testing suite.
-* `verify_system.py` - Local integration verification check.
-* `verify_upgrades.py` - Production upgrades file-logging and WebSocket check.
-* `Vaibhav_ScalingStrategy.html` - Print-to-PDF optimized 5-slide presentation deck.
-* `frontend/` - React frontend directory:
-  * `Dockerfile` - Compiles React and builds static assets served via Nginx.
-  * `nginx.conf` - Nginx proxying rules for REST and WebSocket connections.
-  * `src/App.jsx` - Coordinates dashboard states and subscribes to WebSocket channels.
-  * `src/components/MapWidget.jsx` - Leaflet map utilizing dynamic marker circle colors.
-  * `src/components/ForecastChart.jsx` - Chart.js timeline mapping history and predictions.
-  * `src/components/TicketList.jsx` - Actionable Graded Response Action Plan (GRAP) ticket sidebar.
+```text
+ass-2A/
+├── docker-compose.yml         # Container orchestrator
+├── README.md                  # Project documentation
+├── organize.sh                # Directory organization script
+├── .gitignore                 # Excludes local databases, datasets, models, and node modules
+├── documents/                 # Presentation slides and project deliverables
+│   └── Vaibhav_ScalingStrategy.html
+├── frontend/                  # React Frontend application
+│   ├── Dockerfile
+│   ├── nginx.conf             # Nginx reverse proxy configurations
+│   ├── package.json
+│   ├── vite.config.js
+│   └── src/
+└── backend/                   # FastAPI Backend & ML application
+    ├── Dockerfile
+    ├── requirements.txt
+    ├── db.py                  # Database connection, schemas, and node seeding
+    ├── main.py                # Server, WebSocket manager, endpoints
+    ├── validator.py           # Ingestion Pydantic check & Haversine spatial filter
+    ├── predictor.py           # Weather forecasts, wind vectors, and model prediction
+    ├── train_model.py         # Trains the XGBoost Regressor
+    ├── simulator.py           # Local IoT telemetry loop simulator
+    ├── test_main.py           # Pytest unit testing suite
+    ├── verify_system.py       # Local backend checks (seeding, validation, prediction)
+    ├── verify_upgrades.py     # Production upgrades checks (logging, websockets)
+    ├── Vaibhav_CleanedDataset.xlsx
+    └── city_day.csv
+```
 
 ---
 
 ## 📊 Solution Scaling & Implementation Strategy (Assignment 4B)
 
-The project includes a 5-slide strategic presentation deck ([Vaibhav_ScalingStrategy.html](file:///Users/vaibhavarya/Documents/Culture/ass-2A/Vaibhav_ScalingStrategy.html)) outlining the path to take **SmartAQI** from concept to wide-scale deployment:
+The project includes a 5-slide strategic presentation deck ([Vaibhav_ScalingStrategy.html](file:///Users/vaibhavarya/Documents/Culture/ass-2A/documents/Vaibhav_ScalingStrategy.html)) outlining the path to take **SmartAQI** from concept to wide-scale deployment:
 
 ### 1. Problem & Solution
 * **Problem:** sparse CAAQMS monitoring grids leave spatial blind spots in vulnerable areas, publishing raw, unverified data with frequent sensor failures.
@@ -87,13 +96,14 @@ The project includes a 5-slide strategic presentation deck ([Vaibhav_ScalingStra
 ## 🛠️ How to Run & Verify
 
 ### Local Development (Python/Uvicorn/Vite)
-1. **Install Dependencies:** `pip install -r requirements.txt`
-2. **Run Pytest Suite:** `pytest test_main.py -v` (Verify all tests pass)
-3. **Run Upgrades Check:** `python verify_upgrades.py` (Verify logs file creation)
-4. **Train ML Model:** `python train_model.py` (Outputs model file `aqi_predictor.pkl`)
-5. **Start FastAPI Backend:** `uvicorn main:app --reload`
-6. **Start Telemetry Simulator:** `python simulator.py`
-7. **Start React Frontend:** Navigate to `frontend/`, run `npm install`, then `npm run dev` and open `http://localhost:3000`.
+1. **Navigate to Backend:** `cd backend`
+2. **Install Dependencies:** `pip install -r requirements.txt`
+3. **Run Pytest Suite:** `pytest test_main.py -v` (Verify all tests pass)
+4. **Run Upgrades Check:** `python verify_upgrades.py` (Verify logs file creation)
+5. **Train ML Model:** `python train_model.py` (Outputs model file `aqi_predictor.pkl`)
+6. **Start FastAPI Backend:** `uvicorn main:app --reload`
+7. **Start Telemetry Simulator (in new terminal):** `python simulator.py`
+8. **Start React Frontend (in new terminal):** `cd ../frontend`, run `npm install`, then `npm run dev` and open `http://localhost:3000`.
 
 ### Production Deployment (Docker Compose)
 Ensure Docker Desktop is running on your machine:
@@ -106,7 +116,7 @@ docker-compose up --build
 ---
 
 ## 🖨️ How to Export the Strategy Presentation to PDF
-1. Open the [Vaibhav_ScalingStrategy.html](file:///Users/vaibhavarya/Documents/Culture/ass-2A/Vaibhav_ScalingStrategy.html) file in Google Chrome or Apple Safari.
+1. Open the [Vaibhav_ScalingStrategy.html](file:///Users/vaibhavarya/Documents/Culture/ass-2A/documents/Vaibhav_ScalingStrategy.html) file in Google Chrome or Apple Safari.
 2. Press `Cmd + P` (Mac) or `Ctrl + P` (Windows) to trigger the Print Dialog.
 3. Configure the following export parameters:
    * **Destination:** Save as PDF

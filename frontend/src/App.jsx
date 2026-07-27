@@ -47,9 +47,22 @@ export default function App() {
 
   // Global WebSocket listener for suspect air reading alerts
   useEffect(() => {
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsHost = window.location.host;
-    const wsUrl = `${wsProtocol}//${wsHost}/api/ws`;
+    const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+    let wsUrl;
+    if (apiBaseUrl) {
+      try {
+        const urlObj = new URL(apiBaseUrl);
+        const wsProtocol = urlObj.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${wsProtocol}//${urlObj.host}/api/ws`;
+      } catch (e) {
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${wsProtocol}//${window.location.host}/api/ws`;
+      }
+    } else {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsHost = window.location.host;
+      wsUrl = `${wsProtocol}//${wsHost}/api/ws`;
+    }
     
     console.log('Global App connecting to WebSocket:', wsUrl);
     const socket = new WebSocket(wsUrl);

@@ -4,6 +4,8 @@ import MapWidget from '../components/MapWidget';
 import ForecastChart from '../components/ForecastChart';
 import TicketList from '../components/TicketList';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 export default function DashboardPage() {
   const [nodes, setNodes] = useState([]);
   const [tickets, setTickets] = useState([]);
@@ -17,7 +19,7 @@ export default function DashboardPage() {
   const fetchHistory = async (nodeId) => {
     if (!nodeId) return;
     try {
-      const res = await fetch(`/api/telemetry/history/${nodeId}`);
+      const res = await fetch(`${API_BASE}/api/telemetry/history/${nodeId}`);
       const data = await res.json();
       setHistory(data);
     } catch (err) {
@@ -28,11 +30,11 @@ export default function DashboardPage() {
 
   const fetchData = async () => {
     try {
-      const telemetryRes = await fetch('/api/telemetry/current');
+      const telemetryRes = await fetch(`${API_BASE}/api/telemetry/current`);
       const telemetryData = await telemetryRes.json();
       setNodes(telemetryData);
 
-      const ticketRes = await fetch('/api/tickets');
+      const ticketRes = await fetch(`${API_BASE}/api/tickets`);
       const ticketData = await ticketRes.json();
       setTickets(ticketData);
     } catch (err) {
@@ -44,7 +46,7 @@ export default function DashboardPage() {
     if (!nodeId) return;
     setLoadingForecast(true);
     try {
-      const res = await fetch(`/api/forecast/${nodeId}`);
+      const res = await fetch(`${API_BASE}/api/forecast/${nodeId}`);
       const data = await res.json();
       setForecastValue(data.forecasted_aqi);
     } catch (err) {
@@ -57,7 +59,7 @@ export default function DashboardPage() {
   const handleSyncLiveData = async () => {
     setSyncing(true);
     try {
-      const response = await fetch('/api/sync', { method: 'POST' });
+      const response = await fetch(`${API_BASE}/api/sync`, { method: 'POST' });
       const data = await response.json();
       console.log('Sync response:', data);
       await fetchData();

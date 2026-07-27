@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Info, CheckCircle, AlertCircle } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 export default function SettingsPage() {
   const [botToken, setBotToken] = useState('');
   const [chatId, setChatId] = useState('');
@@ -12,7 +14,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await fetch('/api/settings');
+        const res = await fetch(`${API_BASE}/api/settings`);
         const data = await res.json();
         setBotToken(data.telegram_bot_token);
         setChatId(data.telegram_chat_id);
@@ -30,7 +32,7 @@ export default function SettingsPage() {
     setSaveStatus(null);
     
     try {
-      const response = await fetch('/api/settings', {
+      const response = await fetch(`${API_BASE}/api/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

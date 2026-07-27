@@ -131,6 +131,30 @@ docker-compose up --build
 
 ---
 
+## 🌐 Production Cloud Deployment (Zero-Cost)
+
+The SmartAQI application is designed to be deployed for free on cloud platforms:
+
+### 1. Backend API (Render)
+The backend service is configured for Docker-based deployment on **Render**:
+1. Connect your GitHub repository to [Render](https://render.com/).
+2. Create a new **Web Service** and choose the repository.
+3. Render will auto-detect the `render.yaml` configuration in your repository root, setting up the Docker build context for `./backend`.
+4. Configure the following environment variables in the Render Dashboard:
+   * `DATABASE_URL`: Your production Postgres database connection string (e.g. from Supabase).
+   * `CORS_ORIGINS`: Comma-separated list of allowed origins, including your Vercel frontend URL.
+   * `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and `GEMINI_API_KEY`.
+
+### 2. Frontend Client (Vercel)
+The React client is optimized for static SPA hosting on **Vercel**:
+1. Connect your repository to [Vercel](https://vercel.com/).
+2. Create a new project and select the `./frontend` directory as the root.
+3. Set the following environment variable in the Vercel project settings:
+   * `VITE_API_URL`: The HTTPS URL of your deployed Render backend API.
+4. Deploy the project. The custom `vercel.json` rewrite rules will automatically handle SPA routing redirects.
+
+---
+
 ## 🖨️ How to Export the Strategy Presentation to PDF
 1. Open the [Vaibhav_ScalingStrategy.html](file:///Users/vaibhavarya/Documents/Culture/ass-2A/documents/Vaibhav_ScalingStrategy.html) file in Google Chrome or Apple Safari.
 2. Press `Cmd + P` (Mac) or `Ctrl + P` (Windows) to trigger the Print Dialog.

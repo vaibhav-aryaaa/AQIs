@@ -16,7 +16,8 @@ export default function SensorLabPage() {
   useEffect(() => {
     const fetchNodes = async () => {
       try {
-        const res = await fetch('/api/nodes');
+        const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+        const res = await fetch(`${apiBaseUrl}/api/nodes`);
         const data = await res.json();
         setNodes(data);
         if (data.length > 0) {
@@ -35,7 +36,8 @@ export default function SensorLabPage() {
     setPostStatus(null);
     
     try {
-      const response = await fetch('/api/telemetry', {
+      const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${apiBaseUrl}/api/telemetry`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

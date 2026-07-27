@@ -9,7 +9,7 @@
 
 ## 1. Problem Definition
 Rapid urbanization in India has led to severe air pollution, particularly in northern and industrial hubs like Delhi, Patna, and Ahmedabad. Analysis of historical ambient air quality data (2015–2020) provides crucial local insights that define the scope of our proposed system:
-1. **Dominant Pollutants:** Carbon Monoxide (CO) shows the strongest positive correlation with AQI ($r = 0.65$), followed closely by Fine Particulate Matter (PM2.5) ($r = 0.63$). This indicates that our prototype must prioritize tracking combustion-related gases and fine dust particles.
+1. **Dominant Pollutants:** Carbon Monoxide (CO) shows the strongest positive correlation with AQI ($r = 0.68$), followed closely by Fine Particulate Matter (PM2.5) ($r = 0.66$). This indicates that our prototype must prioritize tracking combustion-related gases and fine dust particles.
 2. **Telemetry Anomalies:** The historical dataset reveals extreme outliers—such as Ahmedabad recording an astronomical AQI peak of 2049.0 on February 19, 2018 (with CO levels at 132.47 mg/m³), and another massive CO spike of 175.81 mg/m³ in October 2017. These readings represent either localized pollution events (e.g., waste fires) or monitoring equipment malfunctions. 
 
 Solving this problem is critical. Long-term exposure to these levels of CO and PM2.5 leads to severe respiratory illness. Our project aims to build a functional, simulated local network that detects these anomalies, alerts citizens, and triggers municipal responses.

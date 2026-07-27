@@ -242,11 +242,6 @@ body {
   background: var(--bg-primary) !important;
 }
 
-.leaflet-tile-pane {
-  filter: var(--leaflet-tile-filter);
-  transition: filter 0.3s ease;
-}
-
 .map-marker-pulse {
   border-radius: 50%;
   border: 2px solid white;

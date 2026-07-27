@@ -66,6 +66,7 @@ for col in high_missing_cols:
     print(f" - Dropping column '{col}' because it has {pct:.2f}% missing values (exceeds the 60% threshold).")
 
 df_clean = df.drop(columns=high_missing_cols)
+df_clean = df_clean.dropna(subset=['AQI'])
 
 # Separate numeric and categorical columns
 numeric_cols = df_clean.select_dtypes(include=[np.number]).columns.tolist()
@@ -106,13 +107,13 @@ print("TOP 3 INSIGHTS/PATTERNS:")
 print("1. Pollutant Correlations with AQI:")
 correlations = df_clean[numeric_cols].corr()['AQI'].sort_values(ascending=False)
 print(correlations.to_string())
-print("   - Insight: CO (r=0.65) and PM2.5 (r=0.63) have the strongest positive correlation with AQI, indicating they are the dominant pollutants.")
+print("   - Insight: CO (r=0.68) and PM2.5 (r=0.66) have the strongest positive correlation with AQI, indicating they are the dominant pollutants.")
 
 print("\n2. Year-over-Year Trend and Covid Lockdown Impact:")
 df_clean['Year'] = df_clean['Date'].dt.year
 yearly_aqi = df_clean.groupby('Year')['AQI'].mean()
 print(yearly_aqi.to_string())
-print("   - Insight: Air quality shows a steady downward trend in AQI from 2015 (~179.6) to 2020 (~113.7).")
+print("   - Insight: Air quality shows a steady downward trend in AQI from 2015 (~212.5) to 2020 (~113.5).")
 df_2020 = df_clean[df_clean['Year'] == 2020]
 monthly_2020 = df_2020.groupby(df_2020['Date'].dt.month)['AQI'].mean()
 print("   - 2020 Monthly AQI (Lockdown comparison):")
@@ -414,9 +415,9 @@ notebook_json = {
    "outputs": [],
    "source": [
     "print(\"=== TOP 3 INSIGHTS / PATTERNS ===\")\n",
-    "print(\"1. Correlation analysis showing CO (r=0.65) and PM2.5 (r=0.63) correlate strongly with AQI.\")\n",
-    "print(\"2. Over the years, the AQI has decreased from 179.6 in 2015 to 113.7 in 2020, with a dramatic drop in 2020 during the Covid-19 lockdown.\")\n",
-    "print(\"3. Ahmedabad (339.9) and Delhi (258.8) are identified as the most polluted hotspots in terms of average AQI.\")\n",
+    "print(\"1. Correlation analysis showing CO (r=0.68) and PM2.5 (r=0.66) correlate strongly with AQI.\")\n",
+    "print(\"2. Over the years, the AQI has decreased from 212.5 in 2015 to 113.5 in 2020, with a dramatic drop in 2020 during the Covid-19 lockdown.\")\n",
+    "print(\"3. Ahmedabad (452.1) and Delhi (259.5) are identified as the most polluted hotspots in terms of average AQI.\")\n",
     "\n",
     "print(\"\\n=== 2 ANOMALIES IDENTIFIED ===\")\n",
     "print(\"1. Ahmedabad recorded a maximum AQI of 2049.0 on 2018-02-19, which is a major outlier compared to normal values.\")\n",

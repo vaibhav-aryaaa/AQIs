@@ -27,7 +27,7 @@ export default function ForecastChart({ selectedNode, forecastValue }) {
   if (!selectedNode) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b' }}>
-        Select a monitoring node on the map to inspect telemetry & AI forecasts.
+        Select a station on the map to view the air quality forecast.
       </div>
     );
   }
@@ -48,16 +48,19 @@ export default function ForecastChart({ selectedNode, forecastValue }) {
   // Combine history with forecasted t+24 value
   const dataValues = [...history, forecastValue || currentAqi + 20];
 
+  const isLight = document.documentElement.classList.contains('light-theme');
+  const forecastColor = isLight ? '#0ea5e9' : '#00ff88';
+
   const data = {
     labels,
     datasets: [
       {
-        label: 'Observed Telemetry',
-        data: [...history, null], // Ends at current
-        borderColor: '#0284c7',
-        backgroundColor: 'rgba(2, 132, 199, 0.1)',
+        label: 'Observed Air Quality',
+        data: [...history, null],
+        borderColor: '#00f0ff',
+        backgroundColor: 'rgba(0, 240, 255, 0.05)',
         borderWidth: 3,
-        pointBackgroundColor: '#0284c7',
+        pointBackgroundColor: '#00f0ff',
         pointRadius: 5,
         tension: 0.3,
         fill: true
@@ -68,11 +71,11 @@ export default function ForecastChart({ selectedNode, forecastValue }) {
           ...Array(5).fill(null),
           currentAqi,
           forecastValue || currentAqi + 20
-        ], // Starts at current, connects to forecast
-        borderColor: '#a855f7',
+        ],
+        borderColor: forecastColor,
         borderDash: [6, 6],
         borderWidth: 3,
-        pointBackgroundColor: '#a855f7',
+        pointBackgroundColor: forecastColor,
         pointRadius: 6,
         pointHoverRadius: 8,
         tension: 0.1
@@ -87,26 +90,26 @@ export default function ForecastChart({ selectedNode, forecastValue }) {
       legend: {
         position: 'top',
         labels: {
-          color: '#94a3b8',
-          font: { family: 'Inter', size: 11 }
+          color: isLight ? '#475569' : '#94a3b8',
+          font: { family: 'Plus Jakarta Sans', size: 11 }
         }
       },
       tooltip: {
-        backgroundColor: '#1e293b',
-        titleColor: '#38bdf8',
-        bodyColor: '#e2e8f0',
-        borderColor: 'rgba(255, 255, 255, 0.08)',
+        backgroundColor: isLight ? '#ffffff' : '#0a0a0a',
+        titleColor: forecastColor,
+        bodyColor: isLight ? '#0f172a' : '#e2e8f0',
+        borderColor: isLight ? 'rgba(14, 165, 233, 0.2)' : 'rgba(0, 255, 136, 0.25)',
         borderWidth: 1
       }
     },
     scales: {
       x: {
-        grid: { color: 'rgba(255, 255, 255, 0.04)' },
-        ticks: { color: '#64748b' }
+        grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255, 255, 255, 0.02)' },
+        ticks: { color: isLight ? '#475569' : '#64748b', font: { family: 'Plus Jakarta Sans' } }
       },
       y: {
-        grid: { color: 'rgba(255, 255, 255, 0.04)' },
-        ticks: { color: '#64748b' },
+        grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255, 255, 255, 0.02)' },
+        ticks: { color: isLight ? '#475569' : '#64748b', font: { family: 'Plus Jakarta Sans' } },
         suggestedMin: 30,
         suggestedMax: 300
       }

@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from db import Base, SensorNode, SensorTelemetry, TelemetryAnomaly, AlertTicket
+from db import Base, SensorNode, SensorTelemetry, TelemetryAnomaly, AlertTicket, SystemSettings
 from main import app, get_db
 
 # Set up an in-memory SQLite database for test runs
@@ -143,3 +143,28 @@ def test_get_tickets():
     data = response.json()
     assert len(data) == 1
     assert data[0]["message"] == "Test warning details"
+
+def test_settings_endpoints():
+    # Test GET settings default value
+    response = client.get("/api/settings")
+    assert response.status_code == 200
+    data = response.json()
+    assert "telegram_bot_token" in data
+    assert data["alert_threshold_aqi"] == 150.0
+
+    # Test POST settings
+    payload = {
+        "telegram_bot_token": "test_token_123",
+        "telegram_chat_id": "test_chat_456",
+        "alert_threshold_aqi": 180.0
+    }
+    post_res = client.post("/api/settings", json=payload)
+    assert post_res.status_code == 200
+    
+    # Verify values are updated
+    get_res = client.get("/api/settings")
+    assert get_res.status_code == 200
+    updated_data = get_res.json()
+    assert updated_data["telegram_bot_token"] == "test_token_123"
+    assert updated_data["telegram_chat_id"] == "test_chat_456"
+    assert updated_data["alert_threshold_aqi"] == 180.0

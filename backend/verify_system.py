@@ -17,8 +17,8 @@ def run_integration_tests():
     try:
         node_count = db.query(SensorNode).count()
         print(f"📊 Seed Check: Found {node_count} registered monitoring nodes in db.")
-        if node_count != 10:
-            print("❌ Seed Check Failed: Expected 10 seeded nodes.")
+        if node_count != 36:
+            print("❌ Seed Check Failed: Expected 36 seeded nodes.")
             sys.exit(1)
         print("✅ Database initialized and seeded successfully.\n")
 

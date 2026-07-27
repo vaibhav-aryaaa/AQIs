@@ -60,12 +60,44 @@ def generate_telemetry(sensor_id, inject_anomaly=False):
     base_pm10 = random.uniform(60.0, 140.0) * scale
     base_co = random.uniform(0.6, 1.8) * scale
 
-    # Calculate AQI based on highest scaling index
-    aqi_pm25 = base_pm25 * 1.4
-    aqi_pm10 = base_pm10 * 0.9
-    aqi_co = base_co * 40.0
-    
-    aqi = max(aqi_pm25, aqi_pm10, aqi_co) + random.uniform(-5, 5)
+    def calculate_us_epa_aqi(pm25: float, pm10: float) -> float:
+        def aqi_pm25(c):
+            if c <= 12.0:
+                return ((50.0 - 0.0) / (12.0 - 0.0)) * (c - 0.0) + 0.0
+            elif c <= 35.4:
+                return ((100.0 - 51.0) / (35.4 - 12.1)) * (c - 12.1) + 51.0
+            elif c <= 55.4:
+                return ((150.0 - 101.0) / (55.4 - 35.5)) * (c - 35.5) + 101.0
+            elif c <= 150.4:
+                return ((200.0 - 151.0) / (150.4 - 55.5)) * (c - 55.5) + 151.0
+            elif c <= 250.4:
+                return ((300.0 - 201.0) / (250.4 - 150.5)) * (c - 150.5) + 201.0
+            elif c <= 350.4:
+                return ((400.0 - 301.0) / (350.4 - 250.5)) * (c - 250.5) + 301.0
+            else:
+                return ((500.0 - 401.0) / (500.0 - 350.5)) * (min(c, 500.0) - 350.5) + 401.0
+
+        def aqi_pm10(c):
+            if c <= 54.0:
+                return ((50.0 - 0.0) / (54.0 - 0.0)) * (c - 0.0) + 0.0
+            elif c <= 154.0:
+                return ((100.0 - 51.0) / (154.0 - 55.0)) * (c - 55.0) + 51.0
+            elif c <= 254.0:
+                return ((150.0 - 101.0) / (254.0 - 155.0)) * (c - 155.0) + 101.0
+            elif c <= 354.0:
+                return ((200.0 - 151.0) / (354.0 - 255.0)) * (c - 255.0) + 151.0
+            elif c <= 424.0:
+                return ((300.0 - 201.0) / (424.0 - 355.0)) * (c - 355.0) + 201.0
+            elif c <= 504.0:
+                return ((400.0 - 301.0) / (504.0 - 425.0)) * (c - 425.0) + 301.0
+            else:
+                return ((500.0 - 401.0) / (604.0 - 505.0)) * (min(c, 604.0) - 505.0) + 401.0
+                
+        aqi_25 = aqi_pm25(pm25)
+        aqi_10 = aqi_pm10(pm10)
+        return max(aqi_25, aqi_10)
+
+    aqi = calculate_us_epa_aqi(base_pm25, base_pm10) + random.uniform(-2, 2)
     aqi = max(aqi, 10.0) # Ensure values are positive
 
     return {

@@ -1,11 +1,21 @@
 import os
 import math
+import logging
 import pickle
 import requests
 import numpy as np
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
-from db import AlertTicket, SensorNode, SensorTelemetry
+from db import AlertTicket, SensorNode, SensorTelemetry, SystemSettings
+from dotenv import load_dotenv
+
+load_dotenv()
+logger = logging.getLogger("smartaqi")
+
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
 
 # Default historical meteorological profiles (offline fallback by month)
 HISTORICAL_WEATHER_PROFILES = {
@@ -23,7 +33,8 @@ HISTORICAL_WEATHER_PROFILES = {
     12: {"temp": 16.0, "humidity": 66.0, "wind_speed": 1.9, "wind_dir": 300, "boundary_layer": 380}, # Dec
 }
 
-MODEL_PATH = "aqi_predictor.pkl"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "aqi_predictor.pkl")
 
 def fetch_weather_forecast(lat: float, lon: float) -> dict:
     """
@@ -37,7 +48,7 @@ def fetch_weather_forecast(lat: float, lon: float) -> dict:
     params = {
         "latitude": lat,
         "longitude": lon,
-        "hourly": "temperature_2m,relativehumidity_2m,windspeed_10m,winddirection_10m",
+        "hourly": "temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m",
         "forecast_days": 1
     }
     
@@ -47,9 +58,9 @@ def fetch_weather_forecast(lat: float, lon: float) -> dict:
             data = response.json()
             # Extract values at index 23 (forecast for t+24 hours)
             temp = data["hourly"]["temperature_2m"][23]
-            humidity = data["hourly"]["relativehumidity_2m"][23]
-            wind_speed = data["hourly"]["windspeed_10m"][23]
-            wind_dir = data["hourly"]["winddirection_10m"][23]
+            humidity = data["hourly"]["relative_humidity_2m"][23]
+            wind_speed = data["hourly"]["wind_speed_10m"][23]
+            wind_dir = data["hourly"]["wind_direction_10m"][23]
             
             # Open-Meteo does not provide planetary boundary layer height in basic hourly,
             # so we combine with our historical fallback to complete the feature set.
@@ -61,7 +72,7 @@ def fetch_weather_forecast(lat: float, lon: float) -> dict:
                 "boundary_layer": fallback["boundary_layer"]
             }
     except Exception as e:
-        print(f"⚠️ Open-Meteo request failed ({e}). Falling back to baseline weather profile.")
+        logger.warning(f"⚠️ Open-Meteo request failed ({e}). Falling back to baseline weather profile.")
         
     return fallback
 
@@ -166,25 +177,62 @@ def run_aqi_forecast(db: Session, node_id: int) -> float:
         predicted_aqi = run_heuristic_inference(features)
 
     # 5. Alert Trigger Check
-    if predicted_aqi > 150.0:
-        trigger_grap_ticket(db, node_id, predicted_aqi)
+    settings = db.query(SystemSettings).order_by(SystemSettings.id.desc()).first()
+    threshold = settings.alert_threshold_aqi if settings else 150.0
+
+    if predicted_aqi > threshold:
+        trigger_grap_ticket(db, node_id, predicted_aqi, weather)
 
     return round(predicted_aqi, 2)
 
-def trigger_grap_ticket(db: Session, node_id: int, forecasted_aqi: float):
+def generate_grap_message_gemini(forecasted_aqi: float, severity: str, area_name: str, weather_details: dict) -> str:
     """
-    Generates a GRAP (Graded Response Action Plan) ticket in the database.
+    Generates dynamic, simple-language municipal actions using Google Gemini API.
     """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key or not genai:
+        # Fallback message if key or package is missing
+        return f"Forecasted AQI for {area_name} is {forecasted_aqi:.1f} ({severity}). Actions: Sprinkling water on local dusty lanes and monitoring traffic corridors."
+    
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        prompt = (
+            f"You are a helpful Clean Air Assistant. Write a 2-sentence municipal action plan and health advisory "
+            f"in simple words for the city government and residents of {area_name}. "
+            f"The predicted AQI is {forecasted_aqi:.1f} ({severity}) and the forecast weather is "
+            f"temp: {weather_details['temp']}C, humidity: {weather_details['humidity']}%. "
+            f"Keep the language very simple, clear, and actionable. Do not use complex markdown formatting or lists."
+        )
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        print(f"⚠️ Gemini API request failed ({e}). Using standard message fallback.")
+        return f"Forecasted AQI for {area_name} is {forecasted_aqi:.1f} ({severity}). Actions: Sprinkling water on local dusty lanes and monitoring traffic corridors."
+
+def trigger_grap_ticket(db: Session, node_id: int, forecasted_aqi: float, weather: dict):
+    """
+    Generates a clean air action plan ticket in the database.
+    """
+    node = db.query(SensorNode).filter(SensorNode.id == node_id).first()
+    area_name = node.area_name if node else f"Node {node_id}"
+
     # Determine severity
     if forecasted_aqi > 300.0:
-        severity = "Severe"
-        msg = f"Forecasted AQI is {forecasted_aqi:.1f} (Severe). Actions: Impose building construction bans, deploy water mist sprinkler units, and issue child/elder health advisories."
+        severity = "Hazardous"
     elif forecasted_aqi > 200.0:
-        severity = "Poor"
-        msg = f"Forecasted AQI is {forecasted_aqi:.1f} (Poor). Actions: Increase mechanical road sweeping frequency and restrict heavy vehicle entry."
-    else:
+        severity = "Very Unhealthy"
+    elif forecasted_aqi > 150.0:
+        severity = "Unhealthy"
+    elif forecasted_aqi > 100.0:
+        severity = "Sensitive Groups Warning"
+    elif forecasted_aqi > 50.0:
         severity = "Moderate"
-        msg = f"Forecasted AQI is {forecasted_aqi:.1f} (Moderate). Actions: Monitor local traffic emission checkpoints."
+    else:
+        severity = "Good"
+
+    # Generate description with Gemini AI (fallback to standard if offline)
+    msg = generate_grap_message_gemini(forecasted_aqi, severity, area_name, weather)
 
     # Avoid duplicate open tickets for same node
     existing = db.query(AlertTicket)\
@@ -201,24 +249,29 @@ def trigger_grap_ticket(db: Session, node_id: int, forecasted_aqi: float):
         )
         db.add(new_ticket)
         db.commit()
-        print(f"⚠️ GRAP TICKET CREATED | Node {node_id} - Forecasted AQI: {forecasted_aqi:.2f} ({severity})")
+        print(f"⚠️ Clean Air Action Ticket Created | Node {node_id} - Forecasted AQI: {forecasted_aqi:.2f} ({severity})")
         
-        # In Phase 4, we will dispatch this message directly to the Telegram bot channel
-        dispatch_telegram_alert(msg)
+        dispatch_telegram_alert(db, msg)
 
-def dispatch_telegram_alert(message: str):
+def dispatch_telegram_alert(db: Session, message: str):
     """
     Sends an automated notification to a Telegram channel/group using the Bot API.
-    Loads credentials from env variables. Logs to console if variables are not configured.
+    Loads credentials from db SystemSettings, falling back to environment variables.
     """
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    settings = db.query(SystemSettings).order_by(SystemSettings.id.desc()).first()
+    bot_token = settings.telegram_bot_token if settings else None
+    chat_id = settings.telegram_chat_id if settings else None
+
+    if not bot_token:
+        bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    if not chat_id:
+        chat_id = os.getenv("TELEGRAM_CHAT_ID")
     
     if bot_token and chat_id:
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         payload = {
             "chat_id": chat_id,
-            "text": f"🚨 *SmartAQI Preemptive Alert* 🚨\n\n{message}",
+            "text": f"🚨 *SmartAQI Clean Air Alert* 🚨\n\n{message}",
             "parse_mode": "Markdown"
         }
         try:
@@ -230,5 +283,5 @@ def dispatch_telegram_alert(message: str):
         except Exception as e:
             print(f"❌ Failed to dispatch Telegram alert: {e}")
     else:
-        print("ℹ️ Telegram credentials not configured. Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID to enable live alerts.")
+        print("ℹ️ Telegram credentials not configured. Set in Settings Panel to enable live alerts.")
         print(f"📢 [Logged Alert] -> {message}")

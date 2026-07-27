@@ -41,22 +41,41 @@ export default function ForecastChart({ selectedNode, forecastValue, history }) 
   }
 
   const chronologicalHistory = [...history].reverse();
-  const currentAqi = selectedNode.aqi || chronologicalHistory[chronologicalHistory.length - 1].aqi || 120.0;
+  
+  // Downsample history to a maximum of 12 points to prevent dot clutter
+  const maxPoints = 12;
+  let sampledHistory = chronologicalHistory;
+  if (chronologicalHistory.length > maxPoints) {
+    const step = (chronologicalHistory.length - 1) / (maxPoints - 1);
+    sampledHistory = [];
+    for (let i = 0; i < maxPoints; i++) {
+      const idx = Math.min(Math.round(i * step), chronologicalHistory.length - 1);
+      sampledHistory.push(chronologicalHistory[idx]);
+    }
+  }
 
-  const labels = [
-    ...chronologicalHistory.map(item => {
+  const rawLabels = [
+    ...sampledHistory.map(item => {
       const d = new Date(item.timestamp);
       return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }),
     'Forecast (t+24h)'
   ];
 
-  const observedData = [...chronologicalHistory.map(item => item.aqi), null];
+  const totalLabels = rawLabels.length;
+  const labels = rawLabels.map((label, idx) => {
+    // Keep first, last observed, mid observed, and forecast
+    if (idx === 0 || idx === totalLabels - 1 || idx === totalLabels - 2) return label;
+    if (idx === Math.floor((totalLabels - 2) / 2)) return label;
+    return '';
+  });
+
+  const observedData = [...sampledHistory.map(item => item.aqi), null];
   
   const forecastData = [
-    ...Array(chronologicalHistory.length - 1).fill(null),
-    chronologicalHistory[chronologicalHistory.length - 1].aqi,
-    forecastValue !== null && forecastValue !== undefined ? forecastValue : (chronologicalHistory[chronologicalHistory.length - 1].aqi + 20)
+    ...Array(sampledHistory.length - 1).fill(null),
+    sampledHistory[sampledHistory.length - 1].aqi,
+    forecastValue !== null && forecastValue !== undefined ? forecastValue : (sampledHistory[sampledHistory.length - 1].aqi + 20)
   ];
 
   const isLight = document.documentElement.classList.contains('light-theme');
@@ -70,9 +89,10 @@ export default function ForecastChart({ selectedNode, forecastValue, history }) 
         data: observedData,
         borderColor: '#00f0ff',
         backgroundColor: 'rgba(0, 240, 255, 0.05)',
-        borderWidth: 3,
+        borderWidth: 2,
         pointBackgroundColor: '#00f0ff',
-        pointRadius: 5,
+        pointRadius: 0, // Remove dot clutter - clean line only
+        pointHoverRadius: 4,
         tension: 0.3,
         fill: true
       },
@@ -81,10 +101,10 @@ export default function ForecastChart({ selectedNode, forecastValue, history }) 
         data: forecastData,
         borderColor: forecastColor,
         borderDash: [6, 6],
-        borderWidth: 3,
+        borderWidth: 2,
         pointBackgroundColor: forecastColor,
-        pointRadius: 6,
-        pointHoverRadius: 8,
+        pointRadius: 4, // Keep dot on forecast point to highlight prediction
+        pointHoverRadius: 6,
         tension: 0.1
       }
     ]
@@ -113,7 +133,12 @@ export default function ForecastChart({ selectedNode, forecastValue, history }) 
     scales: {
       x: {
         grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255, 255, 255, 0.02)' },
-        ticks: { color: isLight ? '#475569' : '#64748b', font: { family: 'Plus Jakarta Sans' } }
+        ticks: { 
+          color: isLight ? '#475569' : '#64748b', 
+          font: { family: 'Plus Jakarta Sans', size: 9 },
+          maxRotation: 0,
+          minRotation: 0
+        }
       },
       y: {
         grid: { color: isLight ? 'rgba(15, 23, 42, 0.04)' : 'rgba(255, 255, 255, 0.02)' },

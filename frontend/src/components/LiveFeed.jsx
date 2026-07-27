@@ -45,18 +45,18 @@ export default function LiveFeed({ feed = [] }) {
             if (item.type === 'telemetry') {
               color = '#38bdf8'; // Blue for clean telemetry
               icon = <Activity size={14} color={color} />;
-              title = `Node ${item.data.node_id} (Telemetry)`;
+              title = `${item.data.area_name || `Node ${item.data.node_id}`} (Telemetry)`;
               desc = `AQI: ${Math.round(item.data.aqi)} | PM2.5: ${item.data.pm25.toFixed(1)} | CO: ${item.data.co.toFixed(2)}`;
             } else if (item.type === 'anomaly') {
               color = '#ef4444'; // Red for anomaly
               icon = <ShieldAlert size={14} color={color} />;
-              title = `Node ${item.data.node_id} Anomaly`;
+              title = `${item.data.area_name || `Node ${item.data.node_id}`} Anomaly`;
               desc = `QUARANTINED: ${item.data.reason.replace('Telemetry anomaly detected & logged: ', '')}`;
             } else if (item.type === 'ticket') {
               color = '#f59e0b'; // Amber for ticket
               icon = <FileText size={14} color={color} />;
               title = `GRAP Action Plan`;
-              desc = `Severity: ${item.data.severity} | Node ${item.data.node_id}: ${item.data.message}`;
+              desc = `Severity: ${item.data.severity} | ${item.data.area_name || `Node ${item.data.node_id}`}: ${item.data.message}`;
             }
 
             return (

@@ -14,7 +14,14 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-limiter = Limiter(key_func=get_remote_address)
+def dev_exempt_remote_address(request: Request):
+    # Exclude localhost/loopback from rate limiting in local development
+    client_ip = get_remote_address(request)
+    if client_ip in ("127.0.0.1", "localhost", "::1"):
+        return None
+    return client_ip
+
+limiter = Limiter(key_func=dev_exempt_remote_address)
 
 
 from db import SessionLocal, init_db, SensorNode, SensorTelemetry, TelemetryAnomaly, AlertTicket, SystemSettings

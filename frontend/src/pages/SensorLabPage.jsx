@@ -50,7 +50,14 @@ export default function SensorLabPage() {
       });
       
       const data = await response.json();
-      setPostStatus(data);
+      if (response.ok) {
+        setPostStatus(data);
+      } else {
+        setPostStatus({
+          status: 'error',
+          message: data.error || (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) || 'Ingestion request failed.'
+        });
+      }
     } catch (err) {
       console.error('Failed to post virtual telemetry:', err);
       setPostStatus({ status: 'error', message: 'Failed to connect to backend api.' });
@@ -328,7 +335,7 @@ export default function SensorLabPage() {
             {postStatus.status === 'error' && (
               <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                 <AlertCircle size={16} />
-                ERROR: Failed to connect to server.
+                REQUEST FAILURE: Ingestion blocked.
               </span>
             )}
             <div style={{ fontSize: '0.75rem', fontWeight: 'normal', opacity: 0.85 }}>

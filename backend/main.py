@@ -1,3 +1,4 @@
+import os
 import logging
 import asyncio
 import random
@@ -32,7 +33,7 @@ app = FastAPI(title="SmartAQI Backend Application", version="1.0.0")
 # Setup CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

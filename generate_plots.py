@@ -17,8 +17,10 @@ plt.rcParams['grid.color'] = '#e2e2e2'
 plt.rcParams['grid.linestyle'] = ':'
 
 # Define output directory and paths
-output_dir = '/Users/vaibhavarya/Documents/Culture/ass-2A'
+output_dir = os.path.dirname(os.path.abspath(__file__))
 dataset_path = os.path.join(output_dir, 'Vaibhav_CleanedDataset.xlsx')
+if not os.path.exists(dataset_path):
+    dataset_path = os.path.join(output_dir, 'backend', 'Vaibhav_CleanedDataset.xlsx')
 
 print("Loading cleaned dataset...")
 df = pd.read_excel(dataset_path)

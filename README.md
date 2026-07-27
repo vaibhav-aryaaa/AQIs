@@ -93,6 +93,20 @@ The project includes a 5-slide strategic presentation deck ([Vaibhav_ScalingStra
 
 ---
 
+## ⚙️ Environment Variables
+
+The backend application supports the following environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | SQLAlchemy connection URL for the database | `sqlite:///smartaqi.db` |
+| `TELEGRAM_BOT_TOKEN` | Bot API token from Telegram's BotFather | `""` |
+| `TELEGRAM_CHAT_ID` | Telegram chat ID for alert routing | `""` |
+| `CORS_ORIGINS` | Comma-separated list of allowed origins for CORS | `http://localhost:3000` |
+| `GEMINI_API_KEY` | Google Gemini API Key for health check validation and advanced predictions | `""` |
+
+---
+
 ## 🛠️ How to Run & Verify
 
 ### Local Development (Python/Uvicorn/Vite)

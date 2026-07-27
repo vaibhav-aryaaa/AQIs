@@ -15,9 +15,12 @@ plt.rcParams['xtick.labelsize'] = 9
 plt.rcParams['ytick.labelsize'] = 9
 
 # Create workspace paths
-dataset_path = '/Users/vaibhavarya/Documents/Culture/ass-2A/city_day.csv'
-excel_output_path = '/Users/vaibhavarya/Documents/Culture/ass-2A/Vaibhav_CleanedDataset.xlsx'
-notebook_output_path = '/Users/vaibhavarya/Documents/Culture/ass-2A/Vaibhav_AirQuality_Analysis.ipynb'
+script_dir = os.path.dirname(os.path.abspath(__file__))
+dataset_path = os.path.join(script_dir, 'city_day.csv')
+if not os.path.exists(dataset_path):
+    dataset_path = os.path.join(script_dir, 'backend', 'city_day.csv')
+excel_output_path = os.path.join(script_dir, 'Vaibhav_CleanedDataset.xlsx')
+notebook_output_path = os.path.join(script_dir, 'Vaibhav_AirQuality_Analysis.ipynb')
 
 print("="*60)
 print("STEP 1: LOADING DATASET")
@@ -151,7 +154,7 @@ plt.xlabel('AQI Value', fontsize=11)
 plt.ylabel('Frequency', fontsize=11)
 plt.legend(frameon=True, facecolor='white', edgecolor='none')
 plt.tight_layout()
-plot1_path = '/Users/vaibhavarya/Documents/Culture/ass-2A/aqi_distribution.png'
+plot1_path = os.path.join(script_dir, 'aqi_distribution.png')
 plt.savefig(plot1_path, dpi=300)
 plt.close()
 print(f"Saved plot: {plot1_path}")
@@ -167,7 +170,7 @@ for i, v in enumerate(top_10.values):
     plt.text(v + 5, i, f"{v:.1f}", va='center', fontweight='semibold', color='#2c3e50')
 plt.xlim(0, top_10.values[0] * 1.15)
 plt.tight_layout()
-plot2_path = '/Users/vaibhavarya/Documents/Culture/ass-2A/top_10_cities_aqi.png'
+plot2_path = os.path.join(script_dir, 'top_10_cities_aqi.png')
 plt.savefig(plot2_path, dpi=300)
 plt.close()
 print(f"Saved plot: {plot2_path}")
@@ -188,7 +191,7 @@ plt.ylabel('Average AQI', fontsize=11)
 plt.legend(frameon=True, facecolor='white')
 plt.grid(True, linestyle=':', alpha=0.6)
 plt.tight_layout()
-plot3_path = '/Users/vaibhavarya/Documents/Culture/ass-2A/aqi_trend_over_time.png'
+plot3_path = os.path.join(script_dir, 'aqi_trend_over_time.png')
 plt.savefig(plot3_path, dpi=300)
 plt.close()
 print(f"Saved plot: {plot3_path}")

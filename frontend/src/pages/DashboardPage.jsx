@@ -8,7 +8,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
-export default function DashboardPage() {
+export default function DashboardPage({ feed }) {
   const [nodes, setNodes] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [selectedNodeId, setSelectedNodeId] = useState(1);
@@ -18,8 +18,7 @@ export default function DashboardPage() {
   const [syncing, setSyncing] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Live feed state
-  const [feed, setFeed] = useState([]);
+  // Initial loading state
   // Initial loading state
   const [initialLoading, setInitialLoading] = useState(true);
 
@@ -91,57 +90,22 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchData();
 
-    const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-    let wsUrl;
-    if (apiBaseUrl) {
-      try {
-        const urlObj = new URL(apiBaseUrl);
-        const wsProtocol = urlObj.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsUrl = `${wsProtocol}//${urlObj.host}/api/ws`;
-      } catch (e) {
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsUrl = `${wsProtocol}//${window.location.host}/api/ws`;
-      }
-    } else {
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsHost = window.location.host;
-      wsUrl = `${wsProtocol}//${wsHost}/api/ws`;
-    }
-    
-    console.log('Connecting to Live WebSocket Feed:', wsUrl);
-    const socket = new WebSocket(wsUrl);
-
-    socket.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        console.log('Received WebSocket message:', msg);
-        
-        // UI.1: Append to live feed, color-coded by type, capped at 20 entries
-        const feedMsg = {
-          type: msg.type,
-          data: msg.data,
-          timestamp: new Date().toISOString()
-        };
-        setFeed((prevFeed) => [feedMsg, ...prevFeed].slice(0, 20));
-
-        if (msg.type === 'telemetry') {
-          setNodes((prevNodes) => 
-            prevNodes.map((n) => n.node_id === msg.data.node_id ? { ...n, ...msg.data } : n)
-          );
-        } else if (msg.type === 'ticket') {
-          setTickets((prevTickets) => [msg.data, ...prevTickets]);
-        }
-      } catch (err) {
-        console.error('Error parsing WebSocket json:', err);
+    const handleWsMessage = (e) => {
+      const msg = e.detail;
+      console.log('Dashboard received global WS message:', msg);
+      
+      if (msg.type === 'telemetry') {
+        setNodes((prevNodes) => 
+          prevNodes.map((n) => n.node_id === msg.data.node_id ? { ...n, ...msg.data } : n)
+        );
+      } else if (msg.type === 'ticket') {
+        setTickets((prevTickets) => [msg.data, ...prevTickets]);
       }
     };
 
-    socket.onclose = () => {
-      console.log('WebSocket disconnected.');
-    };
-
+    window.addEventListener('smartaqi-ws-message', handleWsMessage);
     return () => {
-      socket.close();
+      window.removeEventListener('smartaqi-ws-message', handleWsMessage);
     };
   }, []);
 
@@ -257,7 +221,7 @@ export default function DashboardPage() {
       <main style={{
         flex: 1,
         display: 'grid',
-        gridTemplateRows: '1fr 1fr',
+        gridTemplateRows: 'minmax(0, 1.2fr) minmax(0, 1fr)',
         gap: '20px',
         padding: '20px',
         boxSizing: 'border-box',
@@ -348,85 +312,87 @@ export default function DashboardPage() {
         {/* Lower Details Panels */}
         <section className="analytics-section" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
           {/* Card: Node Details */}
-          <div className="card">
-            <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+            <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
               <MapPin size={18} color="var(--accent-color)" />
               <span>Station Details</span>
             </h3>
             {initialLoading ? (
               <LoadingSpinner message="Loading station details..." />
             ) : selectedNode ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', flexGrow: 1 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div className="custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '10px', flexGrow: 1, overflowY: 'auto', paddingRight: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
                   <div>
-                    <h2 style={{ margin: 0, fontSize: '1.4rem', color: 'var(--text-white)', fontFamily: '"Space Grotesk", sans-serif' }}>
+                    <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-white)', fontFamily: '"Space Grotesk", sans-serif' }}>
                       {selectedNode.area_name}
                     </h2>
-                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
                       Lat: {selectedNode.latitude.toFixed(4)}, Lon: {selectedNode.longitude.toFixed(4)}
                     </span>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b', textTransform: 'uppercase' }}>Current AQI</div>
-                    <div className={`metric-value ${getAqiClass(selectedNode.aqi)}`} style={{ fontSize: '2.2rem', margin: 0, lineHeight: 1.1 }}>
+                    <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Current AQI</div>
+                    <div className={`metric-value ${getAqiClass(selectedNode.aqi)}`} style={{ fontSize: '1.8rem', margin: 0, lineHeight: 1.1 }}>
                       {selectedNode.aqi ? selectedNode.aqi.toFixed(0) : 'N/A'}
                     </div>
-                    <span className={getAqiClass(selectedNode.aqi)} style={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
+                    <span className={getAqiClass(selectedNode.aqi)} style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>
                       {getAqiCategory(selectedNode.aqi)}
                     </span>
                   </div>
                 </div>
 
-                <div className="detail-grid">
-                  <div className="detail-metric">
-                    <span className="metric-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                      <Wind size={13} color="#06b6d4" />
-                      PM2.5 (Fine Dust)
+                <div className="detail-grid" style={{ gap: '8px', flexShrink: 0 }}>
+                  <div className="detail-metric" style={{ padding: '8px' }}>
+                    <span className="metric-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '0.65rem' }}>
+                      <Wind size={12} color="#06b6d4" />
+                      PM2.5
                     </span>
-                    <div className="metric-value" style={{ color: '#06b6d4' }}>
+                    <div className="metric-value" style={{ color: '#06b6d4', fontSize: '1.1rem' }}>
                       {selectedNode.pm25 ? `${selectedNode.pm25.toFixed(1)} ug/m³` : 'N/A'}
                     </div>
                   </div>
-                  <div className="detail-metric">
-                    <span className="metric-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                      <Wind size={13} color="#06b6d4" />
-                      PM10 (Coarse Dust)
+                  <div className="detail-metric" style={{ padding: '8px' }}>
+                    <span className="metric-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '0.65rem' }}>
+                      <Wind size={12} color="#06b6d4" />
+                      PM10
                     </span>
-                    <div className="metric-value" style={{ color: '#06b6d4' }}>
+                    <div className="metric-value" style={{ color: '#06b6d4', fontSize: '1.1rem' }}>
                       {selectedNode.pm10 ? `${selectedNode.pm10.toFixed(1)} ug/m³` : 'N/A'}
                     </div>
                   </div>
-                  <div className="detail-metric">
-                    <span className="metric-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                      <Activity size={13} color="#f59e0b" />
-                      Carbon Monoxide (CO)
+                  <div className="detail-metric" style={{ padding: '8px' }}>
+                    <span className="metric-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '0.65rem' }}>
+                      <Activity size={12} color="#f59e0b" />
+                      CO
                     </span>
-                    <div className="metric-value" style={{ color: '#f59e0b' }}>
+                    <div className="metric-value" style={{ color: '#f59e0b', fontSize: '1.1rem' }}>
                       {selectedNode.co ? `${selectedNode.co.toFixed(2)} mg/m³` : 'N/A'}
                     </div>
                   </div>
                   <div className="detail-metric" style={{
                     borderColor: 'var(--border-glow)',
-                    background: 'var(--accent-glow)'
+                    background: 'var(--accent-glow)',
+                    padding: '8px'
                   }}>
-                    <span className="metric-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                      <Sparkles size={13} color="var(--accent-color)" />
-                      Smart Air Forecast (24h)
+                    <span className="metric-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '0.65rem' }}>
+                      <Sparkles size={12} color="var(--accent-color)" />
+                      Forecast (24h)
                     </span>
-                    <div className="metric-value" style={{ color: 'var(--accent-color)' }}>
-                      {loadingForecast ? 'Updating...' : (forecastValue ? `${forecastValue.toFixed(0)} AQI` : 'N/A')}
+                    <div className="metric-value" style={{ color: 'var(--accent-color)', fontSize: '1.1rem' }}>
+                      {loadingForecast ? '...' : (forecastValue ? `${forecastValue.toFixed(0)} AQI` : 'N/A')}
                     </div>
                   </div>
                 </div>
 
                 {/* Virtual Telemetry Simulator Panel */}
                 <div style={{
-                  marginTop: '15px',
-                  paddingTop: '15px',
+                  marginTop: '10px',
+                  paddingTop: '10px',
                   borderTop: '1px dashed var(--border-primary)',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '10px'
+                  gap: '8px',
+                  flexShrink: 0
                 }}>
                   <h4 style={{ 
                     margin: 0, 

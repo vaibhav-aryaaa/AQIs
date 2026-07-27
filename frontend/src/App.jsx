@@ -17,6 +17,7 @@ function ScrollToTop() {
 
 export default function App() {
   const [anomalyAlert, setAnomalyAlert] = useState(null);
+  const [feed, setFeed] = useState([]);
   
   // Theme state persisted in localStorage
   const [theme, setTheme] = useState(() => {
@@ -78,13 +79,10 @@ export default function App() {
         const wsProtocol = urlObj.protocol === 'https:' ? 'wss:' : 'ws:';
         wsUrl = `${wsProtocol}//${urlObj.host}/api/ws`;
       } catch (e) {
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsUrl = `${wsProtocol}//${window.location.host}/api/ws`;
+        wsUrl = `ws://127.0.0.1:8000/api/ws`;
       }
     } else {
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsHost = window.location.host;
-      wsUrl = `${wsProtocol}//${wsHost}/api/ws`;
+      wsUrl = `ws://127.0.0.1:8000/api/ws`;
     }
     
     console.log('Global App connecting to WebSocket:', wsUrl);
@@ -93,6 +91,19 @@ export default function App() {
     socket.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
+        console.log('Global WebSocket message received:', msg);
+
+        // Update global feed state
+        const feedMsg = {
+          type: msg.type,
+          data: msg.data,
+          timestamp: new Date().toISOString()
+        };
+        setFeed((prevFeed) => [feedMsg, ...prevFeed].slice(0, 20));
+
+        // Dispatch a custom event to notify mounted page components
+        window.dispatchEvent(new CustomEvent('smartaqi-ws-message', { detail: msg }));
+
         if (msg.type === 'anomaly') {
           console.log('Global anomaly received:', msg.data);
           setAnomalyAlert(msg.data);
@@ -248,7 +259,7 @@ export default function App() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', paddingTop: '70px' }}>
           <Routes>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/dashboard" element={<DashboardPage feed={feed} />} />
             <Route path="/simulator" element={<SensorLabPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>

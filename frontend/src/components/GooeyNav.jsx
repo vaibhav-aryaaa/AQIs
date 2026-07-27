@@ -333,7 +333,7 @@ const GooeyNav = ({
         `}
       </style>
       <div className="custom-relative" ref={containerRef}>
-        <nav className="custom-flex custom-relative" style={{ transform: 'translate3d(0,0,0.01px)' }}>
+        <nav className="custom-flex" style={{ transform: 'translate3d(0,0,0.01px)' }}>
           <ul
             ref={navRef}
             className="custom-ul"

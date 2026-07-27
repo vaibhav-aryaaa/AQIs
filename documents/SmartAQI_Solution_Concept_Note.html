@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SmartAQI Solution Concept Note</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-light: #3b82f6;
+      --text-main: #1f2937;
+      --text-muted: #4b5563;
+      --bg-main: #f9fafb;
+      --bg-card: #ffffff;
+      --border-color: #e5e7eb;
+      --code-bg: #f3f4f6;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: var(--text-main);
+      background-color: var(--bg-main);
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 850px;
+      margin: 0 auto;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 50px 45px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    .action-bar {
+      display: flex;
+      justify-content: flex-end;
+      max-width: 850px;
+      margin: 0 auto 15px auto;
+    }
+
+    .btn-download {
+      display: inline-flex;
+      align-items: center;
+      background-color: var(--primary);
+      color: white;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background-color 0.2s;
+    }
+
+    .btn-download:hover {
+      background-color: var(--primary-light);
+    }
+
+    .btn-download svg {
+      margin-right: 8px;
+    }
+
+    header {
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+
+    .doc-meta {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 15px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary);
+      line-height: 1.2;
+    }
+
+    h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--primary);
+      margin-top: 30px;
+      margin-bottom: 12px;
+      border-left: 4px solid var(--primary-light);
+      padding-left: 10px;
+    }
+
+    h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+
+    p {
+      margin-bottom: 12px;
+      font-size: 14px;
+      text-align: justify;
+    }
+
+    ul, ol {
+      margin-bottom: 15px;
+      padding-left: 20px;
+      font-size: 14px;
+    }
+
+    li {
+      margin-bottom: 5px;
+    }
+
+    pre {
+      font-family: 'JetBrains Mono', monospace;
+      background-color: var(--code-bg);
+      border: 1px solid var(--border-color);
+      padding: 15px;
+      border-radius: 6px;
+      font-size: 12px;
+      overflow-x: auto;
+      margin: 15px 0;
+      line-height: 1.35;
+    }
+
+    @media print {
+      body {
+        background-color: white;
+        padding: 0;
+      }
+      .container {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .action-bar {
+        display: none;
+      }
+      .page-break {
+        page-break-before: always;
+      }
+      h2 {
+        page-break-after: avoid;
+      }
+      pre {
+        page-break-inside: avoid;
+        font-size: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="action-bar">
+    <button onclick="window.print()" class="btn-download">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+      </svg>
+      Print / Save as PDF
+    </button>
+  </div>
+
+  <div class="container">
+    <header>
+      <h1>Solution Concept Note: SmartAQI</h1>
+      <p style="font-style: italic; color: var(--text-muted); margin-top: 5px;">AI-Powered Air Quality Monitoring and Decision Support System for Indian Cities</p>
+      <div class="doc-meta">
+        <div><strong>Prepared by:</strong> Vaibhav Arya (Lead Architect) & AI Assistant</div>
+        <div><strong>Target:</strong> 100% Free (₹0 Cost) Prototype Implementation</div>
+        <div><strong>Document State:</strong> Final Concept Note (Print-Ready 2-Page Document)</div>
+        <div><strong>Date:</strong> June 2026</div>
+      </div>
+    </header>
+
+    <h2>1. Problem Definition</h2>
+    <p>Rapid urbanization has made air pollution a critical environmental and public health crisis in India. Analysis of historical ambient air quality data (2015–2020) highlights two key characteristics of urban pollution in major cities such as Delhi, Patna, and Ahmedabad:</p>
+    <ul>
+      <li><strong>Primary Drivers:</strong> Carbon Monoxide (CO) shows the strongest positive correlation with overall AQI (r = 0.65), followed closely by Fine Particulate Matter (PM2.5) (r = 0.63). This shows that vehicular emissions and combustion are the primary contributors.</li>
+      <li><strong>Telemetry Anomalies:</strong> The dataset exhibits severe anomalies, such as Ahmedabad recording an astronomical AQI peak of 2049.0 on February 19, 2018 (with CO levels at 132.47 mg/m³), and another massive CO spike of 175.81 mg/m³ in late 2017. These indicate localized incidents (like landfill fires) or sensor malfunctions.</li>
+    </ul>
+    <p><strong>The Gap:</strong> Standard ambient monitoring (CAAQMS) is sparse due to the high cost of equipment (₹1.5–2 million per station), leaving massive spatial blind spots. Telemetry is broadcast raw without verification, and systems lack local predictive and response-triggering capabilities.</p>
+
+    <h2>2. System Design</h2>
+    <p><strong>SmartAQI</strong> is a modular, 100% free (₹0 cost) software prototype that simulates a high-density micro-sensor grid, validates incoming telemetry against spatial neighbors, forecasts short-term trends using machine learning, and dispatches automated alerts.</p>
+
+    <h3>System Architecture</h3>
+    <pre>
+  [Simulation Layer]   ──►  Python Multi-Node Simulator (simulator.py)
+                                     │ (HTTP POST JSON telemetry)
+                                     ▼
+  [API Gateway Layer]  ──►  FastAPI Web Server (JWT Token Auth)
+                                     │ (Python function calls)
+                                     ▼
+  [Processing Layer]   ──►  Validation Script & Scikit-Learn ML Models
+                                     │ (SQLAlchemy ORM writes)
+                                     ▼
+  [Data Storage Layer] ──►  PostgreSQL (Supabase Cloud) / Local SQLite
+                                     │ (REST & WebSockets)
+                                     ▼
+  [Client & Alerts]    ──►  React Dashboard (Leaflet.js) & Telegram Bot API</pre>
+
+    <h3>Component Details</h3>
+    <ul>
+      <li><strong>Multi-Node Simulator:</strong> Generates synthetic PM2.5 and CO readings across 10 coordinates, simulating daily traffic patterns and injecting random sensor failures.</li>
+      <li><strong>FastAPI Server:</strong> Serves endpoints for data ingestion, user profiles, and triggers the machine learning pipeline.</li>
+      <li><strong>Supabase / SQLite Database:</strong> Relational databases storing sensor logs, validated records, and alert thresholds.</li>
+      <li><strong>Scikit-Learn ML Engine:</strong> Runs spatial-temporal validation to isolate anomalies (like the Ahmedabad outlier) and fits a regression model to forecast next-day AQI.</li>
+      <li><strong>React Web Dashboard:</strong> Renders an interactive map using Leaflet.js and plots AQI trends over time with Chart.js.</li>
+      <li><strong>Telegram Bot API:</strong> Integrates a free notification channel to broadcast alerts to public channels.</li>
+    </ul>
+
+    <div class="page-break"></div>
+
+    <h2>3. Data Flow</h2>
+    <p>The process of capturing, validating, storing, predicting, and acting upon air quality data.</p>
+
+    <h3>Step-by-Step Data Flow</h3>
+    <ol>
+      <li><strong>Data Generation:</strong> Every 5 minutes, the Python simulator runs, generates pollutant values (PM2.5, PM10, CO) for the mock city coordinates, and transmits the JSON payload.</li>
+      <li><strong>Ingestion & Sanity Filtering:</strong> The FastAPI endpoint receives the payload. A Pydantic schema validates the structure. A quick sanity check ensures values aren't negative or empty.</li>
+      <li><strong>Spatial Anomaly Detection:</strong> The validation module queries the database for active nodes within a 2 km radius. If the node's reading deviates by more than 3 standard deviations from its neighbors, it is flagged as Anomalous and quarantined.</li>
+      <li><strong>Database Write:</strong> Clean, validated logs are written to the database.</li>
+      <li><strong>AQI Forecasting:</strong> Once per hour, a background task triggers the Scikit-learn model. It predicts the average AQI for the next day, factoring in wind speed and humidity variables retrieved from a free meteorological API.</li>
+      <li><strong>Notification Trigger:</strong> If the forecasted AQI is above 150, the backend calls the Telegram Bot API to notify users. The dashboard is updated in real time via WebSockets.</li>
+    </ol>
+
+    <h3>Data Flow Diagram</h3>
+    <pre>
+  [Python Simulator] ──► (HTTP POST JSON) ──► [FastAPI Ingestion]
+                                                      │
+                                                      ▼
+                                           [Validation Script]
+                                                      │
+                              ┌───────────────────────┴───────────────────────┐
+                              ▼ (If Anomalous: Flag)                          ▼ (If Valid: Save)
+                     [Error Log Database]                             [PostgreSQL Database]
+                                                                              │
+                                                                              ▼
+                                                                     [Scikit-Learn ML]
+                                                                              │
+                                                                              ▼
+                                                                    [Alert & Action Logic]
+                                                                              │
+                              ┌───────────────────────┬───────────────────────┴───────────────────────┐
+                              ▼ (Public Alert)        ▼ (Dashboard Update)                            ▼ (Analytics API)
+                       [Telegram Bot API]       [React Dashboard via WS]                     [JSON Export Endpoint]</pre>
+
+    <h2>4. Expected Impact</h2>
+    <ul>
+      <li><strong>Environmental Impact:</strong> Enables target-specific mist-sprinkling and traffic diversions to suppress pollution spikes, limits exposure for citizens, and provides a low-cost, scalable framework.</li>
+      <li><strong>Health & Safety:</strong> Enables asthmatics and outdoor workers to check micro-local conditions and receive notification alerts prior to severe pollution buildup.</li>
+      <li><strong>Academic/Development Feasibility:</strong> Provides a complete end-to-end framework that can be built, coded, and demonstrated in a college or internship setting.</li>
+      <li><strong>Scalability:</strong> The code can easily scale from running on a local laptop to a cloud VM (e.g., free tier on Render or Vercel) to monitor a larger municipal pilot zone.</li>
+    </ul>
+  </div>
+
+</body>
+</html>

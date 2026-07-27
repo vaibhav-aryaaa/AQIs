@@ -38,6 +38,29 @@ export default function App() {
     }
   }, [theme]);
 
+  const [autoSimulate, setAutoSimulate] = useState(false);
+
+  useEffect(() => {
+    if (!autoSimulate) return;
+    
+    const triggerRandomSimulation = async () => {
+      try {
+        const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+        const res = await fetch(`${apiBaseUrl}/api/simulate/random-anomaly`, {
+          method: 'POST'
+        });
+        const data = await res.json();
+        console.log('Random simulation triggered:', data);
+      } catch (err) {
+        console.error('Failed to trigger random simulation:', err);
+      }
+    };
+
+    triggerRandomSimulation();
+    const interval = setInterval(triggerRandomSimulation, 15000);
+    return () => clearInterval(interval);
+  }, [autoSimulate]);
+
   const navItems = [
     { label: 'Home', path: '/' },
     { label: 'Dashboard', path: '/dashboard' },
@@ -147,6 +170,41 @@ export default function App() {
           zIndex: 9999,
           boxSizing: 'border-box'
         }}>
+          {/* System Active Status Badge and Auto-Simulate Toggle */}
+          <div style={{
+            position: 'absolute',
+            left: '30px',
+            top: '15px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border-primary)',
+            padding: '6px 14px',
+            borderRadius: '20px',
+            boxShadow: 'var(--card-shadow)',
+            backdropFilter: 'blur(12px)',
+            fontFamily: '"Plus Jakarta Sans", sans-serif',
+            fontSize: '0.8rem',
+            fontWeight: '600',
+            userSelect: 'none'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span className="status-dot"></span>
+              <span style={{ color: 'var(--text-secondary)' }}>System Active</span>
+            </div>
+            <div style={{ width: '1px', height: '14px', background: 'var(--border-primary)' }}></div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'var(--text-primary)' }}>
+              <input
+                type="checkbox"
+                checked={autoSimulate}
+                onChange={(e) => setAutoSimulate(e.target.checked)}
+                style={{ cursor: 'pointer' }}
+              />
+              <span>Auto-Simulate</span>
+            </label>
+          </div>
+
           {/* Gooey Animated Navigation Menu */}
           <GooeyNav items={navItems} />
 

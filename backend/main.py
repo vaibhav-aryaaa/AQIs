@@ -265,11 +265,7 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
-@app.post("/api/telemetry", status_code=status.HTTP_201_CREATED)
-@limiter.limit("60/minute")
-async def ingest_telemetry(request: Request, payload: TelemetrySchema, db: Session = Depends(get_db)):
-    logger.info(f"Received telemetry payload for Node {payload.node_id}: AQI={payload.aqi}, CO={payload.co}")
-
+async def process_telemetry_payload(payload: TelemetrySchema, db: Session):
     # 1. Verify node exists
     node = db.query(SensorNode).filter(SensorNode.id == payload.node_id).first()
     if not node:
@@ -352,6 +348,29 @@ async def ingest_telemetry(request: Request, payload: TelemetrySchema, db: Sessi
         "status": "success",
         "message": "Telemetry reading successfully ingested and stored."
     }
+
+@app.post("/api/telemetry", status_code=status.HTTP_201_CREATED)
+@limiter.limit("60/minute")
+async def ingest_telemetry(request: Request, payload: TelemetrySchema, db: Session = Depends(get_db)):
+    logger.info(f"Received telemetry payload for Node {payload.node_id}: AQI={payload.aqi}, CO={payload.co}")
+    return await process_telemetry_payload(payload, db)
+
+@app.post("/api/simulate/random-anomaly", status_code=status.HTTP_201_CREATED)
+async def simulate_random_anomaly(db: Session = Depends(get_db)):
+    nodes = db.query(SensorNode).all()
+    if not nodes:
+        raise HTTPException(status_code=404, detail="No sensor nodes seeded")
+    random_node = random.choice(nodes)
+    
+    payload = TelemetrySchema(
+        node_id=random_node.id,
+        pm25=600.0 + random.random() * 200,
+        pm10=1100.0 + random.random() * 300,
+        co=85.0 + random.random() * 20,
+        aqi=750.0 + random.random() * 100
+    )
+    logger.info(f"Simulating random anomaly on Node {random_node.id} ({random_node.area_name})")
+    return await process_telemetry_payload(payload, db)
 
 @app.get("/api/nodes")
 def get_nodes(db: Session = Depends(get_db)):

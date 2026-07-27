@@ -1,7 +1,8 @@
 import React from 'react';
 import { FileText, AlertTriangle, CheckCircle, Clock, PanelLeftClose } from 'lucide-react';
+import LoadingSpinner from './LoadingSpinner';
 
-export default function TicketList({ tickets = [], onToggleSidebar }) {
+export default function TicketList({ tickets = [], onToggleSidebar, loading = false }) {
   const getSeverityStyle = (severity) => {
     switch (severity.toLowerCase()) {
       case 'severe':
@@ -65,7 +66,9 @@ export default function TicketList({ tickets = [], onToggleSidebar }) {
           <PanelLeftClose size={18} />
         </button>
       </h3>
-      {tickets.length === 0 ? (
+      {loading ? (
+        <LoadingSpinner message="Loading action plans..." />
+      ) : tickets.length === 0 ? (
         <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textAlign: 'center', marginTop: '20px' }}>
           No active warnings. Air quality is stable.
         </div>

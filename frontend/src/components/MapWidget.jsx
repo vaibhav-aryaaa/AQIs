@@ -105,22 +105,40 @@ export default function MapWidget({ nodes = [], onSelectNode, selectedNodeId, fo
         {nodes.map((node) => {
           const markerColor = getAqiColor(node.aqi);
           const isSelected = selectedNodeId === node.node_id;
+          const isStale = !node.timestamp || ((Date.now() - new Date(node.timestamp).getTime()) / 60000 > 5);
 
           return (
-            <CircleMarker
-              key={node.node_id}
-              center={[node.latitude, node.longitude]}
-              pathOptions={{
-                color: isSelected ? '#ffffff' : markerColor,
-                fillColor: markerColor,
-                fillOpacity: 0.8,
-                weight: isSelected ? 3 : 1,
-                radius: isSelected ? 14 : 10
-              }}
-              eventHandlers={{
-                click: () => onSelectNode(node.node_id)
-              }}
-            >
+            <React.Fragment key={node.node_id}>
+              {isStale && (
+                <CircleMarker
+                  center={[node.latitude, node.longitude]}
+                  className="leaflet-pulse"
+                  pathOptions={{
+                    className: 'leaflet-pulse',
+                    color: '#ef4444',
+                    fillColor: '#ef4444',
+                    fillOpacity: 0.15,
+                    weight: 1.5,
+                    radius: isSelected ? 22 : 16
+                  }}
+                  eventHandlers={{
+                    click: () => onSelectNode(node.node_id)
+                  }}
+                />
+              )}
+              <CircleMarker
+                center={[node.latitude, node.longitude]}
+                pathOptions={{
+                  color: isSelected ? '#ffffff' : markerColor,
+                  fillColor: markerColor,
+                  fillOpacity: 0.8,
+                  weight: isSelected ? 3 : 1,
+                  radius: isSelected ? 14 : 10
+                }}
+                eventHandlers={{
+                  click: () => onSelectNode(node.node_id)
+                }}
+              >
               <Popup>
                 <div style={{ color: '#0f172a', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
                   <h4 style={{ margin: '0 0 4px 0', fontSize: '0.95rem', fontFamily: '"Space Grotesk", sans-serif', fontWeight: '700' }}>{node.area_name}</h4>
@@ -145,8 +163,9 @@ export default function MapWidget({ nodes = [], onSelectNode, selectedNodeId, fo
                 </div>
               </Popup>
             </CircleMarker>
-          );
-        })}
+          </React.Fragment>
+        );
+      })}
       </MapContainer>
     </div>
   );

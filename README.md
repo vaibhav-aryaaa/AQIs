@@ -1,66 +1,109 @@
 # SmartAQI: Preemptive Air Quality Management & Decision Support System
+*An AI-powered, block-level air quality monitoring, validation, and forecasting system for Indian cities.*
 
 [![SmartAQI CI](https://github.com/vaibhav-aryaaa/AQIs/actions/workflows/ci.yml/badge.svg)](https://github.com/vaibhav-aryaaa/AQIs/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![XGBoost](https://img.shields.io/badge/XGBoost-1E88E5?style=flat&logo=xgboost&logoColor=white)](https://xgboost.readthedocs.io/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
 
-An enterprise-grade, preemptive air quality monitoring and automated decision support system designed for Indian cities (Delhi-NCR). This repository features a containerized multi-service architecture, real-time spatial anomaly detection, machine learning-driven AQI forecasting, and live dashboard communication via WebSockets.
+🚀 **Live Demo:** [SmartAQI Dashboard](https://smartaqi.vercel.app)
+
+---
+
+### 📝 Problem ➔ Solution ➔ Impact Summary
+* **Problem:** Sparse municipal monitoring grids (CAAQMS) leave massive spatial blind spots across Indian cities, broadcasting raw, unvalidated telemetry containing frequent sensor errors.
+* **Solution:** SmartAQI introduces a high-density virtual sensor grid validated in real-time by a spatial **Haversine neighbor filter** ($>3\sigma$ outlier detection) and forecasted 24 hours in advance using an optimized **XGBoost Regressor** model trained on verified historical data.
+* **Impact:** Preemptive alerts are pushed to citizens via Telegram, while hyper-local municipal response tickets automate target-level GRAP mitigation measures (e.g. site-specific mist spraying) to protect public health.
 
 ---
 
-## 🚀 Key Features & Production Upgrades
-
-### 1. Production DevOps & Containerization
-* **Multi-Service Docker Grid:** Orchestrated via `docker-compose.yml` to spin up a FastAPI backend (running on Uvicorn inside `./backend`) and a modular React frontend (compiled via Vite and served via Nginx inside `./frontend`).
-* **Clean Network Routing:** Frontend assets and backend API endpoints communicate securely over a private Docker bridged network, handling reverse proxies for REST `/api` routes and WebSocket `/api/ws` connections.
-
-### 2. Real-Time WebSockets Synchronization
-* **Instant Event Streaming:** Pushes telemetry updates, quarantined outliers, and newly opened GRAP mitigation tickets to client UIs instantly using a native asynchronous WebSocket broker.
-* **Interactive Anomaly Simulator:** Includes a built-in button on the dashboard UI to send simulated sensor anomalies (e.g., $AQI = 750, CO = 95\ mg/m^3$) to test and display the real-time server quarantine and alerting workflow.
-
-### 3. Spatial Anomaly Consistency Checking
-* **Quarantine Pipeline:** Ingested sensor telemetry is validated in real-time. Pydantic models enforce physical boundaries, while a **Haversine Distance Filter** queries active neighboring nodes within a 2 km radius. 
-* **Outlier Isolation:** If a node's reading deviates from its neighbors by $> 3\sigma$ (standard deviations), the pipeline quarantines the log in a `TelemetryAnomaly` database table and alerts administrators rather than publishing raw unverified logs.
-
-### 4. 24-Hour AI Forecasting Engine
-* **Meteorological Ingestion:** Integrates live weather forecasts (temperature, humidity, wind direction, planetary boundary layer height) by querying the Open-Meteo API.
-* **Feature Engineering:** Decomposes wind speed and direction into Cartesian wind vectors ($U$ and $V$ components) to model pollutant dispersion, and converts datetime values to cyclical sine/cosine components.
-* **XGBoost Regressor:** Utilizes a pre-trained XGBoost Regressor model (`aqi_predictor.pkl`) to output forecasted local AQI.
-* **Offline Weather Baseline Fallback:** If network connections fail, the forecasting pipeline falls back to a historical monthly meteorological profile dictionary to prevent server timeouts.
-
-### 5. Automated Unit Testing
-* **Test Suite (`test_main.py`):** Configured with isolated database fixtures using `pytest` and `FastAPI TestClient` to test valid postings, schema validation errors, and neighbor quarantine rules.
+### 🏗️ System Architecture
+```text
+┌────────────────────────────────────────────────────────┐
+│                  SIMULATED SENSOR GRID                 │
+│      [Node 1]      [Node 2]      ...      [Node 36]     │
+└───────────────────────────┬────────────────────────────┘
+                            │ HTTP POST (Telemetry Ingest)
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│                     FASTAPI BACKEND                    │
+│  ┌───────────────────────┐   ┌───────────────────────┐  │
+│  │   IP Rate Limiting    │   │   Haversine Filter    │  │
+│  │    (slowapi: 60/m)    │   │  (Spatial Consistent) │  │
+│  └───────────┬───────────┘   └───────────┬───────────┘  │
+│              │                           │              │
+│              ▼                           ▼              │
+│  ┌───────────────────────┐   ┌───────────────────────┐  │
+│  │   24h AI Forecast     │   │   Alembic DB Migration│  │
+│  │  (XGBoost: R2=0.89)   │   │  (SQLite/PostgreSQL)  │  │
+│  └───────────┬───────────┘   └───────────┬───────────┘  │
+│              │                           │              │
+│              ▼                           ▼              │
+│  ┌───────────────────────┐   ┌───────────────────────┐  │
+│  │  Telegram Alert Bot   │   │   WebSocket Broker    │  │
+│  └───────────┬───────────┘   └───────────┬───────────┘  │
+└──────────────┼───────────────────────────┼──────────────┘
+               │                           │ JSON Event Stream
+               ▼ (Alert Routing)           ▼ (Suspect Banners)
+┌───────────────────────────┐   ┌────────────────────────────┐
+│     TELEGRAM CHANNEL      │   │   REACT WEB DASHBOARD      │
+│  "🚨 GRAP Alert Issued!" │   │(Leaflet Map & Live Charts) │
+└───────────────────────────┘   └────────────────────────────┘
+```
 
 ---
+
+### 📸 Dashboard Demo
+![SmartAQI Dashboard Demo](demo.gif)
+
+------
 
 ## 📁 Repository Structure
 
 ```text
 ass-2A/
-├── docker-compose.yml         # Container orchestrator
+├── docker-compose.yml         # Container orchestrator configuration
+├── render.yaml                # Render cloud deployment settings
+├── LICENSE                    # MIT License file
 ├── README.md                  # Project documentation
 ├── organize.sh                # Directory organization script
-├── .gitignore                 # Excludes local databases, datasets, models, and node modules
-├── documents/                 # Presentation slides and project deliverables
-│   └── Vaibhav_ScalingStrategy.html
-├── frontend/                  # React Frontend application
+├── .gitignore                 # Excludes local databases, datasets, and models
+├── documents/                 # Strategy presentation and concept note files
+│   ├── Vaibhav_ScalingStrategy.html
+│   ├── SmartAQI_Solution_Concept_Note.html
+│   └── Vaibhav_Assignment3B_AI_Solution_Design.md
+├── frontend/                  # React Frontend SPA client
 │   ├── Dockerfile
 │   ├── nginx.conf             # Nginx reverse proxy configurations
+│   ├── vercel.json            # Vercel SPA routing configurations
 │   ├── package.json
+│   ├── .env.example           # Client configuration template
 │   ├── vite.config.js
 │   └── src/
-└── backend/                   # FastAPI Backend & ML application
+│       ├── components/        # UI widgets and layouts
+│       │   ├── LiveFeed.jsx        # Scrolling WS activity tracker panel
+│       │   ├── LoadingSpinner.jsx  # Reusable state loading spinner
+│       │   ├── MapWidget.jsx       # Leaflet map layers and offline indicators
+│       │   ├── ForecastChart.jsx   # Telemetry history & model forecasts
+│       │   └── TicketList.jsx      # Active municipal tickets sidebar
+│       └── pages/             # Page layout containers
+└── backend/                   # FastAPI Backend & XGBoost ML engine
     ├── Dockerfile
-    ├── requirements.txt
-    ├── db.py                  # Database connection, schemas, and node seeding
-    ├── main.py                # Server, WebSocket manager, endpoints
-    ├── validator.py           # Ingestion Pydantic check & Haversine spatial filter
-    ├── predictor.py           # Weather forecasts, wind vectors, and model prediction
-    ├── train_model.py         # Trains the XGBoost Regressor
-    ├── simulator.py           # Local IoT telemetry loop simulator
-    ├── test_main.py           # Pytest unit testing suite
-    ├── verify_system.py       # Local backend checks (seeding, validation, prediction)
-    ├── verify_upgrades.py     # Production upgrades checks (logging, websockets)
-    ├── Vaibhav_CleanedDataset.xlsx
-    └── city_day.csv
+    ├── requirements.txt       # Pinned packages list (includes rich, psycopg2)
+    ├── db.py                  # Programmatic Alembic runner and database seeding
+    ├── config.py              # Centralized Pydantic BaseSettings config
+    ├── main.py                # Server routes, rate limits, WebSocket brokers
+    ├── validator.py           # Spatial Haversine neighbor consistency validator
+    ├── predictor.py           # Meteorological forecasts and XGBoost predictions
+    ├── train_model.py         # Trains the XGBoost Regressor model
+    ├── simulator.py           # Rich-based IoT multi-node simulation CLI
+    ├── test_main.py           # 11-point Pytest unit test suite
+    ├── verify_upgrades.py     # Logging / WebSocket verification checks
+    ├── Vaibhav_CleanedDataset.xlsx # Cleaned dataset (re-trained XGBoost)
+    ├── migrations/            # Alembic schema migrations folder
+    └── alembic.ini            # Alembic configuration
 ```
 
 ---
@@ -114,12 +157,13 @@ The backend application supports the following environment variables:
 ### Local Development (Python/Uvicorn/Vite)
 1. **Navigate to Backend:** `cd backend`
 2. **Install Dependencies:** `pip install -r requirements.txt`
-3. **Run Pytest Suite:** `pytest test_main.py -v` (Verify all tests pass)
-4. **Run Upgrades Check:** `python verify_upgrades.py` (Verify logs file creation)
-5. **Train ML Model:** `python train_model.py` (Outputs model file `aqi_predictor.pkl`)
-6. **Start FastAPI Backend:** `uvicorn main:app --reload`
-7. **Start Telemetry Simulator (in new terminal):** `python simulator.py`
-8. **Start React Frontend (in new terminal):** `cd ../frontend`, run `npm install`, then `npm run dev` and open `http://localhost:3000`.
+3. **Run DB Migrations:** `alembic upgrade head`
+4. **Run Pytest Suite:** `pytest test_main.py -v` (Verify all 11 tests pass)
+5. **Run Upgrades Check:** `python verify_upgrades.py` (Verify logs file creation)
+6. **Train ML Model:** `python train_model.py` (Outputs model file `aqi_predictor.pkl` with R2 ~0.89)
+7. **Start FastAPI Backend:** `uvicorn main:app --reload`
+8. **Start Telemetry Simulator (in new terminal):** `python simulator.py`
+9. **Start React Frontend (in new terminal):** `cd ../frontend`, run `npm install`, then `npm run dev` and open `http://localhost:3000`.
 
 ### Production Deployment (Docker Compose)
 Ensure Docker Desktop is running on your machine:
@@ -165,3 +209,8 @@ The React client is optimized for static SPA hosting on **Vercel**:
    * **Margins:** None (or Default)
    * **Background graphics:** Checked (Crucial for importing dark styles and gradients)
 4. Click **Save** and save it as `Vaibhav_ScalingStrategy.pdf`.
+
+---
+
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

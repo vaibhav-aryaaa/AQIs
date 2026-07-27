@@ -2,6 +2,11 @@ import time
 import random
 import requests
 from datetime import datetime
+from rich.live import Live
+from rich.table import Table
+from rich.console import Console
+
+console = Console()
 
 BACKEND_URL = "http://127.0.0.1:8000/api/telemetry"
 
@@ -98,7 +103,7 @@ def generate_telemetry(sensor_id, inject_anomaly=False):
         return max(aqi_25, aqi_10)
 
     aqi = calculate_us_epa_aqi(base_pm25, base_pm10) + random.uniform(-2, 2)
-    aqi = max(aqi, 10.0) # Ensure values are positive
+    aqi = max(aqi, 10.0)
 
     return {
         "node_id": sensor_id,
@@ -108,42 +113,111 @@ def generate_telemetry(sensor_id, inject_anomaly=False):
         "aqi": round(aqi, 2)
     }
 
-def run_simulator(interval_seconds=10):
-    """
-    Main loop running the simulator. Emits data for all 10 nodes every cycle.
-    Injects a spatial anomaly with a 10% chance per cycle.
-    """
-    print("====================================================")
-    print("SmartAQI Multi-Node IoT Telemetry Simulator Started")
-    print(f"Target Endpoint: {BACKEND_URL}")
-    print(f"Polling Interval: {interval_seconds} seconds")
-    print("====================================================")
+def get_aqi_colored_string(aqi):
+    if aqi <= 50:
+        return f"[bold green]{aqi:.1f} (Good)[/bold green]"
+    elif aqi <= 100:
+        return f"[bold yellow]{aqi:.1f} (Moderate)[/bold yellow]"
+    elif aqi <= 150:
+        return f"[bold orange3]{aqi:.1f} (Sensitive Groups Warning)[/bold orange3]"
+    elif aqi <= 200:
+        return f"[bold red]{aqi:.1f} (Unhealthy)[/bold red]"
+    elif aqi <= 300:
+        return f"[bold purple]{aqi:.1f} (Very Unhealthy)[/bold purple]"
+    else:
+        return f"[bold dark_red]{aqi:.1f} (Hazardous)[/bold dark_red]"
 
-    while True:
-        # Determine if we should inject an anomaly in this cycle
-        anomaly_cycle = random.random() < 0.10
-        anomaly_node = random.randint(1, len(SENSORS)) if anomaly_cycle else None
+def run_simulator(interval_seconds=5):
+    """
+    Main loop running the simulator with rich dashboard output.
+    """
+    sensor_states = {
+        s["id"]: {
+            "name": s["name"],
+            "aqi": 0.0,
+            "pm25": 0.0,
+            "pm10": 0.0,
+            "co": 0.0,
+            "status": "Initializing",
+            "last_update": "Awaiting first cycle..."
+        }
+        for s in SENSORS
+    }
+    cycle_count = 0
 
-        for sensor in SENSORS:
-            should_fail = (sensor["id"] == anomaly_node)
-            payload = generate_telemetry(sensor["id"], inject_anomaly=should_fail)
-            
-            try:
-                response = requests.post(BACKEND_URL, json=payload, timeout=5)
-                status = response.json().get("status", "unknown")
-                msg = response.json().get("message", "")
+    def generate_table(next_cycle_in):
+        table = Table(
+            title=f"SmartAQI Multi-Node IoT Telemetry Simulator Dashboard\n[cyan]Cycle Count: {cycle_count} | Next Cycle in: {next_cycle_in}s[/cyan]"
+        )
+        table.add_column("ID", justify="center", style="dim")
+        table.add_column("Area Name", justify="left", style="white")
+        table.add_column("AQI", justify="center")
+        table.add_column("PM2.5 (ug/m³)", justify="right")
+        table.add_column("PM10 (ug/m³)", justify="right")
+        table.add_column("CO (mg/m³)", justify="right")
+        table.add_column("Status", justify="center")
+        table.add_column("Last Server Message", justify="left")
+
+        for s_id, data in sorted(sensor_states.items()):
+            aqi_str = get_aqi_colored_string(data["aqi"]) if data["aqi"] > 0 else "N/A"
+            status_str = data["status"]
+            if status_str == "✅ Ingested":
+                status_formatted = "[bold green]✅ Ingested[/bold green]"
+            elif status_str == "🚨 Quarantined":
+                status_formatted = "[bold red]🚨 Quarantined[/bold red]"
+            elif "Error" in status_str:
+                status_formatted = "[bold red]❌ Connection Error[/bold red]"
+            else:
+                status_formatted = f"[dim]{status_str}[/dim]"
+
+            table.add_row(
+                str(s_id),
+                data["name"],
+                aqi_str,
+                f"{data['pm25']:.1f}" if data["pm25"] > 0 else "N/A",
+                f"{data['pm10']:.1f}" if data["pm10"] > 0 else "N/A",
+                f"{data['co']:.2f}" if data["co"] > 0 else "N/A",
+                status_formatted,
+                data["last_update"]
+            )
+        return table
+
+    # Start live display context
+    with Live(generate_table(0), console=console, refresh_per_second=1) as live:
+        while True:
+            cycle_count += 1
+            # Determine if we should inject an anomaly in this cycle
+            anomaly_cycle = random.random() < 0.15
+            anomaly_node = random.randint(1, len(SENSORS)) if anomaly_cycle else None
+
+            for sensor in SENSORS:
+                should_fail = (sensor["id"] == anomaly_node)
+                payload = generate_telemetry(sensor["id"], inject_anomaly=should_fail)
                 
-                label = f"[{sensor['name']}] (ID {sensor['id']})"
-                if status == "quarantined":
-                    print(f"🚨 QUARANTINED | {label} - Sent: AQI={payload['aqi']}, CO={payload['co']}. Server message: {msg}")
-                else:
-                    print(f"✅ Ingested    | {label} - Sent: AQI={payload['aqi']}, CO={payload['co']}.")
-            except requests.exceptions.RequestException as e:
-                print(f"❌ Connection Error | Failed to send data for node {sensor['id']}: {e}")
-                
-        print(f"--- Cycle completed at {datetime.now().strftime('%H:%M:%S')}. Sleeping for {interval_seconds}s ---\n")
-        time.sleep(interval_seconds)
+                # Update generated values in state dictionary
+                sensor_states[sensor["id"]]["aqi"] = payload["aqi"]
+                sensor_states[sensor["id"]]["pm25"] = payload["pm25"]
+                sensor_states[sensor["id"]]["pm10"] = payload["pm10"]
+                sensor_states[sensor["id"]]["co"] = payload["co"]
+
+                try:
+                    response = requests.post(BACKEND_URL, json=payload, timeout=5)
+                    status_val = response.json().get("status", "unknown")
+                    msg = response.json().get("message", "")
+                    
+                    if status_val == "quarantined":
+                        sensor_states[sensor["id"]]["status"] = "🚨 Quarantined"
+                    else:
+                        sensor_states[sensor["id"]]["status"] = "✅ Ingested"
+                    sensor_states[sensor["id"]]["last_update"] = msg if msg else "Success"
+                except requests.exceptions.RequestException as e:
+                    sensor_states[sensor["id"]]["status"] = "❌ Connection Error"
+                    sensor_states[sensor["id"]]["last_update"] = str(e)[:45]
+
+            # Countdown sleep loop
+            for remaining in range(interval_seconds, 0, -1):
+                live.update(generate_table(remaining))
+                time.sleep(1)
 
 if __name__ == "__main__":
-    # Short interval for demonstration; change to 300 for 5-minute production cycle
     run_simulator(interval_seconds=5)

@@ -2,12 +2,11 @@ import os
 from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
-from dotenv import load_dotenv
 
-load_dotenv()
+from config import settings
 
 # Setup SQLite Database
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///smartaqi.db")
+DATABASE_URL = settings.DATABASE_URL
 
 engine = create_engine(
     DATABASE_URL, connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
@@ -77,7 +76,19 @@ class SystemSettings(Base):
 
 # Initialize DB and Seed Default Nodes
 def init_db():
-    Base.metadata.create_all(bind=engine)
+    # Run Alembic migrations programmatically
+    import os
+    from alembic.config import Config
+    from alembic import command
+    
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    ini_path = os.path.join(base_dir, "alembic.ini")
+    
+    alembic_cfg = Config(ini_path)
+    alembic_cfg.set_main_option("script_location", os.path.join(base_dir, "migrations"))
+    
+    # Run upgrade head
+    command.upgrade(alembic_cfg, "head")
     db = SessionLocal()
     try:
         # Check if nodes exist, if less than 30 we upgrade to full Delhi-NCR grid
@@ -136,8 +147,8 @@ def init_db():
         # Check if settings exist, if not seed them
         if db.query(SystemSettings).count() == 0:
             default_settings = SystemSettings(
-                telegram_bot_token=os.getenv("TELEGRAM_BOT_TOKEN", ""),
-                telegram_chat_id=os.getenv("TELEGRAM_CHAT_ID", ""),
+                telegram_bot_token=settings.TELEGRAM_BOT_TOKEN,
+                telegram_chat_id=settings.TELEGRAM_CHAT_ID,
                 alert_threshold_aqi=150.0
             )
             db.add(default_settings)

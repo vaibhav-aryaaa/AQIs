@@ -1,5 +1,7 @@
 # SmartAQI: Preemptive Air Quality Management & Decision Support System
 
+[![SmartAQI CI](https://github.com/vaibhav-aryaaa/AQIs/actions/workflows/ci.yml/badge.svg)](https://github.com/vaibhav-aryaaa/AQIs/actions/workflows/ci.yml)
+
 An enterprise-grade, preemptive air quality monitoring and automated decision support system designed for Indian cities (Delhi-NCR). This repository features a containerized multi-service architecture, real-time spatial anomaly detection, machine learning-driven AQI forecasting, and live dashboard communication via WebSockets.
 
 ---

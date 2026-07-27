@@ -5,35 +5,43 @@ import random
 import requests
 from typing import List
 from datetime import datetime, timedelta
-from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from dotenv import load_dotenv
+from config import settings
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
-load_dotenv()
+limiter = Limiter(key_func=get_remote_address)
+
 
 from db import SessionLocal, init_db, SensorNode, SensorTelemetry, TelemetryAnomaly, AlertTicket, SystemSettings
 from validator import TelemetrySchema, validate_spatial_consistency
 from predictor import run_aqi_forecast
+
+from logging.handlers import RotatingFileHandler
 
 # Setup Production Logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
     handlers=[
-        logging.FileHandler("app.log"),
+        RotatingFileHandler("app.log", maxBytes=5_000_000, backupCount=3),
         logging.StreamHandler()
     ]
 )
 logger = logging.getLogger("SmartAQI")
 
 app = FastAPI(title="SmartAQI Backend Application", version="1.0.0")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Setup CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:3000").split(","),
+    allow_origins=settings.CORS_ORIGINS.split(","),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -239,6 +247,14 @@ def get_db():
     finally:
         db.close()
 
+@app.get("/api/health")
+def health_check(db: Session = Depends(get_db)):
+    try:
+        db.query(SensorNode).first()
+        return {"status": "ok", "database": "connected"}
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"unhealthy: {e}")
+
 @app.websocket("/api/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
@@ -250,7 +266,8 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 @app.post("/api/telemetry", status_code=status.HTTP_201_CREATED)
-async def ingest_telemetry(payload: TelemetrySchema, db: Session = Depends(get_db)):
+@limiter.limit("60/minute")
+async def ingest_telemetry(request: Request, payload: TelemetrySchema, db: Session = Depends(get_db)):
     logger.info(f"Received telemetry payload for Node {payload.node_id}: AQI={payload.aqi}, CO={payload.co}")
 
     # 1. Verify node exists

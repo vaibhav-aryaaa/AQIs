@@ -7,9 +7,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from db import AlertTicket, SensorNode, SensorTelemetry, SystemSettings
-from dotenv import load_dotenv
-
-load_dotenv()
+from config import settings as config_settings
 logger = logging.getLogger("smartaqi")
 
 try:
@@ -33,8 +31,7 @@ HISTORICAL_WEATHER_PROFILES = {
     12: {"temp": 16.0, "humidity": 66.0, "wind_speed": 1.9, "wind_dir": 300, "boundary_layer": 380}, # Dec
 }
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "aqi_predictor.pkl")
+MODEL_PATH = config_settings.MODEL_PATH
 
 def fetch_weather_forecast(lat: float, lon: float) -> dict:
     """
@@ -189,7 +186,7 @@ def generate_grap_message_gemini(forecasted_aqi: float, severity: str, area_name
     """
     Generates dynamic, simple-language municipal actions using Google Gemini API.
     """
-    api_key = os.getenv("GEMINI_API_KEY")
+    api_key = config_settings.GEMINI_API_KEY
     if not api_key or not genai:
         # Fallback message if key or package is missing
         return f"Forecasted AQI for {area_name} is {forecasted_aqi:.1f} ({severity}). Actions: Sprinkling water on local dusty lanes and monitoring traffic corridors."
@@ -263,9 +260,9 @@ def dispatch_telegram_alert(db: Session, message: str):
     chat_id = settings.telegram_chat_id if settings else None
 
     if not bot_token:
-        bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+        bot_token = config_settings.TELEGRAM_BOT_TOKEN
     if not chat_id:
-        chat_id = os.getenv("TELEGRAM_CHAT_ID")
+        chat_id = config_settings.TELEGRAM_CHAT_ID
     
     if bot_token and chat_id:
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"

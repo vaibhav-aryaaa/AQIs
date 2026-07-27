@@ -198,3 +198,25 @@ def test_get_telemetry_history():
     response_404 = client.get("/api/telemetry/history/999")
     assert response_404.status_code == 404
 
+def test_ingest_rate_limiting():
+    payload = {
+        "node_id": 1,
+        "pm25": 45.0,
+        "pm10": 80.0,
+        "co": 1.1,
+        "aqi": 65.0
+    }
+    # Send 100 rapid requests
+    responses = [client.post("/api/telemetry", json=payload) for _ in range(100)]
+    status_codes = [r.status_code for r in responses]
+    assert 429 in status_codes
+
+def test_health_check():
+    response = client.get("/api/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+    assert data["database"] == "connected"
+
+
+

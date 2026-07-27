@@ -23,7 +23,7 @@ ChartJS.register(
   Filler
 );
 
-export default function ForecastChart({ selectedNode, forecastValue }) {
+export default function ForecastChart({ selectedNode, forecastValue, history }) {
   if (!selectedNode) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b' }}>
@@ -32,21 +32,32 @@ export default function ForecastChart({ selectedNode, forecastValue }) {
     );
   }
 
-  // Generate mock past 6 hours from current node value for the graph visual
-  const currentAqi = selectedNode.aqi || 120.0;
-  const history = [
-    currentAqi - 15 + Math.random() * 10,
-    currentAqi - 8 + Math.random() * 8,
-    currentAqi - 12 + Math.random() * 10,
-    currentAqi - 2 + Math.random() * 5,
-    currentAqi - 5 + Math.random() * 5,
-    currentAqi
+  if (!history || history.length === 0) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b', fontSize: '0.9rem', textAlign: 'center', padding: '20px', boxSizing: 'border-box' }}>
+        No historical data yet — waiting for first readings
+      </div>
+    );
+  }
+
+  const chronologicalHistory = [...history].reverse();
+  const currentAqi = selectedNode.aqi || chronologicalHistory[chronologicalHistory.length - 1].aqi || 120.0;
+
+  const labels = [
+    ...chronologicalHistory.map(item => {
+      const d = new Date(item.timestamp);
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }),
+    'Forecast (t+24h)'
   ];
 
-  const labels = ['t-5h', 't-4h', 't-3h', 't-2h', 't-1h', 'Current (t)', 'Forecast (t+24h)'];
+  const observedData = [...chronologicalHistory.map(item => item.aqi), null];
   
-  // Combine history with forecasted t+24 value
-  const dataValues = [...history, forecastValue || currentAqi + 20];
+  const forecastData = [
+    ...Array(chronologicalHistory.length - 1).fill(null),
+    chronologicalHistory[chronologicalHistory.length - 1].aqi,
+    forecastValue !== null && forecastValue !== undefined ? forecastValue : (chronologicalHistory[chronologicalHistory.length - 1].aqi + 20)
+  ];
 
   const isLight = document.documentElement.classList.contains('light-theme');
   const forecastColor = isLight ? '#0ea5e9' : '#00ff88';
@@ -56,7 +67,7 @@ export default function ForecastChart({ selectedNode, forecastValue }) {
     datasets: [
       {
         label: 'Observed Air Quality',
-        data: [...history, null],
+        data: observedData,
         borderColor: '#00f0ff',
         backgroundColor: 'rgba(0, 240, 255, 0.05)',
         borderWidth: 3,
@@ -67,11 +78,7 @@ export default function ForecastChart({ selectedNode, forecastValue }) {
       },
       {
         label: 'AI 24h Forecast',
-        data: [
-          ...Array(5).fill(null),
-          currentAqi,
-          forecastValue || currentAqi + 20
-        ],
+        data: forecastData,
         borderColor: forecastColor,
         borderDash: [6, 6],
         borderWidth: 3,
@@ -82,6 +89,7 @@ export default function ForecastChart({ selectedNode, forecastValue }) {
       }
     ]
   };
+
 
   const options = {
     responsive: true,

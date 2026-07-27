@@ -9,9 +9,22 @@ export default function DashboardPage() {
   const [tickets, setTickets] = useState([]);
   const [selectedNodeId, setSelectedNodeId] = useState(1);
   const [forecastValue, setForecastValue] = useState(null);
+  const [history, setHistory] = useState([]);
   const [loadingForecast, setLoadingForecast] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const fetchHistory = async (nodeId) => {
+    if (!nodeId) return;
+    try {
+      const res = await fetch(`/api/telemetry/history/${nodeId}`);
+      const data = await res.json();
+      setHistory(data);
+    } catch (err) {
+      console.error('Error fetching telemetry history:', err);
+      setHistory([]);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -48,6 +61,7 @@ export default function DashboardPage() {
       const data = await response.json();
       console.log('Sync response:', data);
       await fetchData();
+      await fetchHistory(selectedNodeId);
     } catch (err) {
       console.error('Failed to sync live data:', err);
     } finally {
@@ -93,6 +107,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchForecast(selectedNodeId);
+    fetchHistory(selectedNodeId);
   }, [selectedNodeId]);
 
   useEffect(() => {
@@ -332,7 +347,7 @@ export default function DashboardPage() {
               )}
             </h3>
             <div style={{ flexGrow: 1, minHeight: '180px' }}>
-              <ForecastChart selectedNode={selectedNode} forecastValue={forecastValue} />
+              <ForecastChart selectedNode={selectedNode} forecastValue={forecastValue} history={history} />
             </div>
           </div>
         </section>

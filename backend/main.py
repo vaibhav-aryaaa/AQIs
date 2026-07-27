@@ -433,6 +433,31 @@ async def get_node_forecast(node_id: int, db: Session = Depends(get_db)):
         "forecast_timestamp": (datetime.utcnow() + timedelta(hours=24)).isoformat()
     }
 
+@app.get("/api/telemetry/history/{node_id}")
+def get_telemetry_history(node_id: int, hours: int = 6, db: Session = Depends(get_db)):
+    node = db.query(SensorNode).filter(SensorNode.id == node_id).first()
+    if not node:
+        logger.warning(f"History query rejected: Sensor node {node_id} does not exist.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Sensor node with ID {node_id} does not exist"
+        )
+    cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+    history = db.query(SensorTelemetry)\
+                .filter(SensorTelemetry.node_id == node_id)\
+                .filter(SensorTelemetry.timestamp >= cutoff_time)\
+                .order_by(SensorTelemetry.timestamp.desc())\
+                .all()
+    return [
+        {
+            "timestamp": item.timestamp.isoformat() + 'Z',
+            "aqi": item.aqi,
+            "pm25": item.pm25,
+            "pm10": item.pm10,
+            "co": item.co
+        } for item in history
+    ]
+
 class SettingsSchema(BaseModel):
     telegram_bot_token: str
     telegram_chat_id: str

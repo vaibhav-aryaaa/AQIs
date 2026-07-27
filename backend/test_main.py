@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -168,3 +168,33 @@ def test_settings_endpoints():
     assert updated_data["telegram_bot_token"] == "test_token_123"
     assert updated_data["telegram_chat_id"] == "test_chat_456"
     assert updated_data["alert_threshold_aqi"] == 180.0
+
+def test_get_telemetry_history():
+    db = TestingSessionLocal()
+    now = datetime.utcnow()
+    t1 = SensorTelemetry(node_id=1, pm25=10.0, pm10=20.0, co=0.5, aqi=30.0, timestamp=now - timedelta(hours=10))
+    t2 = SensorTelemetry(node_id=1, pm25=20.0, pm10=40.0, co=1.0, aqi=60.0, timestamp=now - timedelta(hours=4))
+    t3 = SensorTelemetry(node_id=1, pm25=30.0, pm10=60.0, co=1.5, aqi=90.0, timestamp=now - timedelta(hours=2))
+    
+    db.add_all([t1, t2, t3])
+    db.commit()
+    db.close()
+
+    response = client.get("/api/telemetry/history/1")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2
+    assert data[0]["aqi"] == 90.0
+    assert data[1]["aqi"] == 60.0
+
+    response_12 = client.get("/api/telemetry/history/1?hours=12")
+    assert response_12.status_code == 200
+    data_12 = response_12.json()
+    assert len(data_12) == 3
+    assert data_12[0]["aqi"] == 90.0
+    assert data_12[1]["aqi"] == 60.0
+    assert data_12[2]["aqi"] == 30.0
+
+    response_404 = client.get("/api/telemetry/history/999")
+    assert response_404.status_code == 404
+

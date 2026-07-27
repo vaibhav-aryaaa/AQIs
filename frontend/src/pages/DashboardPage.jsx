@@ -165,6 +165,10 @@ export default function DashboardPage({ feed }) {
       });
       const data = await response.json();
       console.log('Simulation triggered:', data);
+      if (response.ok) {
+        await fetchForecast(selectedNode.node_id);
+        await fetchHistory(selectedNode.node_id);
+      }
     } catch (err) {
       console.error('Failed to trigger virtual telemetry simulation:', err);
     } finally {

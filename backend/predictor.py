@@ -179,6 +179,16 @@ def run_aqi_forecast(db: Session, node_id: int) -> float:
 
     if predicted_aqi > threshold:
         trigger_grap_ticket(db, node_id, predicted_aqi, weather)
+    else:
+        # Resolve existing open tickets for this node if air quality has recovered
+        existing = db.query(AlertTicket)\
+                     .filter(AlertTicket.node_id == node_id)\
+                     .filter(AlertTicket.status == "Open")\
+                     .first()
+        if existing:
+            existing.status = "Resolved"
+            db.commit()
+            print(f"✅ Clean Air Action Plan Ticket Resolved | Node {node_id} - Predicted AQI: {predicted_aqi:.2f} is under threshold {threshold}")
 
     return round(predicted_aqi, 2)
 

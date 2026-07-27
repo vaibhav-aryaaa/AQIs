@@ -351,6 +351,9 @@ async def process_telemetry_payload(payload: TelemetrySchema, db: Session):
         }
     })
     
+    # Recalculate forecast and trigger/resolve GRAP tickets for this node immediately
+    await run_forecast_and_broadcast_tickets(payload.node_id, db)
+    
     return {
         "status": "success",
         "message": "Telemetry reading successfully ingested and stored."
@@ -437,6 +440,60 @@ def get_tickets(db: Session = Depends(get_db)):
         })
     return result
 
+async def run_forecast_and_broadcast_tickets(node_id: int, db: Session):
+    # Track open tickets before
+    pre_open = {t.id: t for t in db.query(AlertTicket).filter(AlertTicket.status == "Open").all()}
+    
+    # Recalculate forecast
+    try:
+        forecasted_aqi = run_aqi_forecast(db, node_id)
+    except Exception as e:
+        logger.error(f"Error running forecast: {e}")
+        return None
+
+    # Track open tickets after
+    post_open = {t.id: t for t in db.query(AlertTicket).filter(AlertTicket.status == "Open").all()}
+
+    # 1. Detect newly created tickets
+    for t_id, ticket in post_open.items():
+        if t_id not in pre_open:
+            logger.info(f"Broadcasting new GRAP Alert Ticket: {ticket.message}")
+            node = db.query(SensorNode).filter(SensorNode.id == ticket.node_id).first()
+            await manager.broadcast({
+                "type": "ticket",
+                "data": {
+                    "id": ticket.id,
+                    "node_id": ticket.node_id,
+                    "area_name": node.area_name if node else f"Zone {ticket.node_id}",
+                    "severity": ticket.severity,
+                    "message": ticket.message,
+                    "status": ticket.status,
+                    "timestamp": ticket.timestamp.isoformat() + 'Z'
+                }
+            })
+
+    # 2. Detect resolved tickets
+    for t_id, ticket in pre_open.items():
+        if t_id not in post_open:
+            logger.info(f"Broadcasting resolved GRAP Alert Ticket for Node {ticket.node_id}")
+            node = db.query(SensorNode).filter(SensorNode.id == ticket.node_id).first()
+            updated_ticket = db.query(AlertTicket).filter(AlertTicket.id == t_id).first()
+            if updated_ticket:
+                await manager.broadcast({
+                    "type": "ticket",
+                    "data": {
+                        "id": updated_ticket.id,
+                        "node_id": updated_ticket.node_id,
+                        "area_name": node.area_name if node else f"Zone {updated_ticket.node_id}",
+                        "severity": updated_ticket.severity,
+                        "message": updated_ticket.message,
+                        "status": updated_ticket.status,
+                        "timestamp": updated_ticket.timestamp.isoformat() + 'Z'
+                    }
+                })
+
+    return forecasted_aqi
+
 @app.get("/api/forecast/{node_id}")
 async def get_node_forecast(node_id: int, db: Session = Depends(get_db)):
     node = db.query(SensorNode).filter(SensorNode.id == node_id).first()
@@ -447,28 +504,9 @@ async def get_node_forecast(node_id: int, db: Session = Depends(get_db)):
             detail=f"Sensor node with ID {node_id} does not exist"
         )
     
-    # Track ticket database size before running forecast to identify if a new ticket is generated
-    pre_ticket_count = db.query(AlertTicket).count()
-    
-    forecasted_aqi = run_aqi_forecast(db, node_id)
-    
-    # Broadcast new ticket if generated during forecast logic
-    post_tickets = db.query(AlertTicket).order_by(AlertTicket.id.desc()).all()
-    if len(post_tickets) > pre_ticket_count:
-        new_ticket = post_tickets[0]
-        logger.info(f"Broadcasting new GRAP Alert Ticket: {new_ticket.message}")
-        await manager.broadcast({
-            "type": "ticket",
-            "data": {
-                "id": new_ticket.id,
-                "node_id": new_ticket.node_id,
-                "area_name": node.area_name if node else f"Zone {new_ticket.node_id}",
-                "severity": new_ticket.severity,
-                "message": new_ticket.message,
-                "status": new_ticket.status,
-                "timestamp": new_ticket.timestamp.isoformat() + 'Z'
-            }
-        })
+    forecasted_aqi = await run_forecast_and_broadcast_tickets(node_id, db)
+    if forecasted_aqi is None:
+        forecasted_aqi = 100.0
         
     return {
         "node_id": node_id,

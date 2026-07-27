@@ -16,7 +16,15 @@ export default function SensorLabPage() {
   useEffect(() => {
     const fetchNodes = async () => {
       try {
-        const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+        const getApiBase = () => {
+          const envUrl = import.meta.env.VITE_API_URL;
+          if (envUrl) return envUrl;
+          if (window.location.hostname.endsWith('vercel.app')) {
+            return 'https://smartaqi-backend.onrender.com';
+          }
+          return '';
+        };
+        const apiBaseUrl = getApiBase();
         const res = await fetch(`${apiBaseUrl}/api/nodes`);
         const data = await res.json();
         setNodes(data);
@@ -36,7 +44,15 @@ export default function SensorLabPage() {
     setPostStatus(null);
     
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+      const getApiBase = () => {
+        const envUrl = import.meta.env.VITE_API_URL;
+        if (envUrl) return envUrl;
+        if (window.location.hostname.endsWith('vercel.app')) {
+          return 'https://smartaqi-backend.onrender.com';
+        }
+        return '';
+      };
+      const apiBaseUrl = getApiBase();
       const response = await fetch(`${apiBaseUrl}/api/telemetry`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

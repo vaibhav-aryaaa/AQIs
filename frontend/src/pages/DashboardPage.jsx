@@ -6,7 +6,16 @@ import TicketList from '../components/TicketList';
 import LiveFeed from '../components/LiveFeed';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const getApiBase = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) return envUrl;
+  if (window.location.hostname.endsWith('vercel.app')) {
+    return 'https://smartaqi-backend.onrender.com';
+  }
+  return '';
+};
+
+const API_BASE = getApiBase();
 
 export default function DashboardPage({ feed }) {
   const [nodes, setNodes] = useState([]);

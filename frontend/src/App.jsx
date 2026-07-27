@@ -71,7 +71,16 @@ export default function App() {
 
   // Global WebSocket listener for suspect air reading alerts
   useEffect(() => {
-    const apiBaseUrl = import.meta.env.VITE_API_URL || '';
+    const getApiBase = () => {
+      const envUrl = import.meta.env.VITE_API_URL;
+      if (envUrl) return envUrl;
+      if (window.location.hostname.endsWith('vercel.app')) {
+        return 'https://smartaqi-backend.onrender.com';
+      }
+      return '';
+    };
+
+    const apiBaseUrl = getApiBase();
     let wsUrl;
     if (apiBaseUrl) {
       try {
@@ -79,10 +88,10 @@ export default function App() {
         const wsProtocol = urlObj.protocol === 'https:' ? 'wss:' : 'ws:';
         wsUrl = `${wsProtocol}//${urlObj.host}/api/ws`;
       } catch (e) {
-        wsUrl = `ws://127.0.0.1:8000/api/ws`;
+        wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.hostname}:8000/api/ws`;
       }
     } else {
-      wsUrl = `ws://127.0.0.1:8000/api/ws`;
+      wsUrl = `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.hostname}:8000/api/ws`;
     }
     
     console.log('Global App connecting to WebSocket:', wsUrl);
